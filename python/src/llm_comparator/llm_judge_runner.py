@@ -139,7 +139,7 @@ class LLMJudgeRunner:
         return None
       if (rating_label := rating_label.text) is None:
         return None
-
+      _logger.info(f"This is the rating_label: {rating_label}")
       try:
         score = self.rating_to_score_map[rating_label]
       except KeyError:
@@ -147,6 +147,7 @@ class LLMJudgeRunner:
             'LLM judge returned an unknown rating label: %s}', rating_label
         )
         return None
+      _logger.info(f"This is the score: {score}, rating_label: {rating_label}, rationale: {rationale}")
       return (score, rating_label, rationale.strip(' \n'))
 
     max_example_index = max([ex['example_index'] for ex in inputs_for_judge])
