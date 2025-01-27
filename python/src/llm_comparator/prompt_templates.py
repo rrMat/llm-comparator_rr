@@ -24,8 +24,6 @@ When you are evaluating, you can consider the following criteria:
 - Is the response clearly written and avoiding unnecessary information?
 - Is the response creative, especially when the question is asking for generating creative content?
 - Does the response contain factual information?
-- Does the response NOT contain any harmful, unsafe, dangerous, or sexually explicit content?
-- Does the response refuse to answer to the question that asks for harmful, unsafe, dangerous, or sexually explicit content?
 
 You will provide a short explanation and your final rating (verdict) in the following XML format.
 
