@@ -31,12 +31,12 @@ from llm_comparator import types
 def run(
     inputs: Sequence[types.LLMJudgeInput],
     judge: llm_judge_runner.LLMJudgeRunner,
-    bulletizer: rationale_bullet_generator.RationaleBulletGenerator,
-    clusterer: rationale_cluster_generator.RationaleClusterGenerator,
+    # bulletizer: rationale_bullet_generator.RationaleBulletGenerator,
+    # clusterer: rationale_cluster_generator.RationaleClusterGenerator,
     model_names: Sequence[str] = ('A', 'B'),
     judge_opts: Optional[types.JsonDict] = None,
-    bulletizer_opts: Optional[types.JsonDict] = None,
-    clusterer_opts: Optional[types.JsonDict] = None,
+    # bulletizer_opts: Optional[types.JsonDict] = None,
+    # clusterer_opts: Optional[types.JsonDict] = None,
 ) -> types.JsonDict:
   """Runs a comparison with LLM Comparator.
 
@@ -71,12 +71,12 @@ def run(
   """
 
   judgements = judge.run(inputs, **(judge_opts or {}))
-  bullets = bulletizer.run(judgements, **(bulletizer_opts or {}))
-  clusters, cluster_similarities = clusterer.run(
-      bullets, **(clusterer_opts or {})
-  )
+  # bullets = bulletizer.run(judgements, **(bulletizer_opts or {}))
+  # clusters, cluster_similarities = clusterer.run(
+  #     bullets, **(clusterer_opts or {})
+  # )
 
-  per_example_generator = zip(inputs, judgements, cluster_similarities)
+  per_example_generator = zip(inputs, judgements) #, cluster_similarities
 
   return {
       'metadata': {'custom_fields_schema': []},
@@ -84,17 +84,17 @@ def run(
       'examples': [
           {
               'input_text': input['prompt'],
-              'tags': [],
+              'tags': ["to_be_reviewed"],
               'output_text_a': input['response_a'],
               'output_text_b': input['response_b'],
               'score': judgement['score'],
               'individual_rater_scores': judgement['individual_rater_scores'],
-              'rationale_list': similarity,
+              'rationale_list': [], 
               'custom_fields': {},
           }
-          for input, judgement, similarity in per_example_generator
+          for input, judgement in per_example_generator
       ],
-      'rationale_clusters': clusters,
+      'rationale_clusters': [],
   }
 
 

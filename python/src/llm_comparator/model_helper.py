@@ -18,6 +18,7 @@ import abc
 from collections.abc import Iterable, Sequence
 import time
 from typing import Optional
+from tqdm import tqdm
 
 from vertexai import generative_models
 from vertexai import language_models
@@ -27,9 +28,9 @@ from llm_comparator import _logging
 
 from sentence_transformers import SentenceTransformer
 
-from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, pipeline
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
 import bitsandbytes as bnb
-
+import torch
 
 MAX_NUM_RETRIES = 5
 DEFAULT_MAX_OUTPUT_TOKENS = 256
@@ -63,12 +64,19 @@ class HuggingFaceGenerationModelHelper(GenerationModelHelper):
     """HuggingFace text generation model helper."""
 
     def __init__(self, model_name: str = 'EleutherAI/gpt-neo-2.7B', use_8bit: bool = False, use_4bit: bool = False):
-        if use_4bit:
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        if use_4bit or use_8bit:
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=use_4bit,
+                load_in_8bit=use_8bit,
+            )
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(model_name, load_in_4bit=True, device_map='auto')
-        elif use_8bit:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(model_name, load_in_8bit=True, device_map='auto')
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                quantization_config=quantization_config,
+                device_map='auto'
+            ).to(self.device)
         else:
             self.generator = pipeline('text-generation', model=model_name)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -76,8 +84,10 @@ class HuggingFaceGenerationModelHelper(GenerationModelHelper):
     def predict(
         self,
         prompt: str,
-        max_new_tokens: int = 512,
-        temperature: float = 1.0,
+        max_new_tokens: int = 200,
+        temperature: float = 0.3,
+        top_p = 0.7,
+        top_k = 15,
     ) -> str:
 
         if not prompt:
@@ -98,6 +108,8 @@ class HuggingFaceGenerationModelHelper(GenerationModelHelper):
                 **model_inputs,
                 max_new_tokens=max_new_tokens,
                 temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
                 num_return_sequences=1
             )
             
@@ -116,22 +128,26 @@ class HuggingFaceGenerationModelHelper(GenerationModelHelper):
     def predict_batch(
         self,
         batch_of_messages: Sequence[str],
-        max_new_tokens: int = 512,
-        temperature: float = 1.0,
+        max_new_tokens: int = 200,
+        temperature: float = 0.3,
+        top_p = 0.7,
+        top_k = 15,
     ) -> Sequence[str]:
         """
         Runs predict_chat on a batch of conversations.
         Each item in 'batch_of_messages' is a list of dicts representing a conversation.
         """
         results = []
-        for prompt in batch_of_messages:
+        for prompt in tqdm(batch_of_messages):
             output = self.predict(
                 prompt,
                 max_new_tokens=max_new_tokens,
                 temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
             )
             results.append(output)
-            print(f"results: {results}")
+            tqdm.write(f"results: {results}")
         return results
 
 

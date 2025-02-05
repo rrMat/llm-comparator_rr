@@ -80,13 +80,13 @@ export const DEFAULT_COLUMN_LIST: Field[] = [
   },
   {
     id: FIELD_ID_FOR_OUTPUT_A,
-    name: 'Response from Model A',
+    name: 'LLM Response',
     type: FieldType.BASE,
     visible: true,
   },
   {
     id: FIELD_ID_FOR_OUTPUT_B,
-    name: 'Response from Model B',
+    name: 'Ground Truth',
     type: FieldType.BASE,
     visible: true,
   },

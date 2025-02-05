@@ -10409,13 +10409,13 @@ text.highlighted {
     },
     {
       id: FIELD_ID_FOR_OUTPUT_A,
-      name: "Response from Model A",
+      name: "LLM Response",
       type: "base" /* BASE */,
       visible: true
     },
     {
       id: FIELD_ID_FOR_OUTPUT_B,
-      name: "Response from Model B",
+      name: "Ground Truth",
       type: "base" /* BASE */,
       visible: true
     },

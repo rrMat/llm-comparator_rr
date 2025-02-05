@@ -34,14 +34,15 @@ _GenerationModelHelper = model_helper.GenerationModelHelper
 _logger = _logging.logger
 
 
+
+
 DEFAULT_RATING_TO_SCORE_MAP = {
-    'A is much better': 1.5,
-    'A is better': 1.0,
-    'A is slightly better': 0.5,
-    'same': 0.0,
-    'B is slightly better': -0.5,
-    'B is better': -1.0,
-    'B is much better': -1.5,
+    'A is correct': 1.0,
+    'A is partially correct': 0.5,           
+    'A is wrong': -1,         
+    'Skipped Question': -0.5,      
+    'Hallucination': -1.5,      
+    'Missing Answer': 0,
 }
 
 
@@ -83,23 +84,13 @@ class LLMJudgeRunner:
     for index, ex in enumerate(inputs):
       # Non-flipped.
       # If num_repeats is an odd number, roundup.
-      for _ in range(math.ceil(num_repeats * 0.5)):
+      for _ in range(math.ceil(num_repeats)):
         inputs_with_repeats.append({
             'example_index': index,
             'prompt': ex['prompt'],
             'response_a': ex['response_a'],
             'response_b': ex['response_b'],
             'is_flipped': False,
-        })
-      # Flipped.
-      # If num_repeats is an odd number, rounddown.
-      for _ in range(math.floor(num_repeats * 0.5)):
-        inputs_with_repeats.append({
-            'example_index': index,
-            'prompt': ex['prompt'],
-            'response_a': ex['response_b'],
-            'response_b': ex['response_a'],
-            'is_flipped': True,
         })
     _logger.info('Created %d inputs for LLM judge.', len(inputs_with_repeats))
     return inputs_with_repeats
