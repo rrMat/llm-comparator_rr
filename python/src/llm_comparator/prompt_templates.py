@@ -16,56 +16,61 @@
 
 DEFAULT_LLM_JUDGE_PROMPT_TEMPLATE = """
 
-### LLM-Judge Prompt
+### **Prompt del Giudice LLM con Attività di Tagging**
 
-**Task:**  
-You are an LLM-Judge tasked with evaluating an answer (A) given a question (Q) and a ground truth answer (GTA). Your evaluation must follow these rules:
+**Compito:**
+Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q) e una risposta di riferimento (GTA).
 
-1. **A and GTA perfectly match in meaning (they can be phrased differently):**  
-   Verdict: `A is correct`  
-   Explanation: Explain why A and GTA match in meaning.
-   
-2. **A and GTA are partially correct but differ in details:**
-    Verdict: `A is partially correct`
-    Explanation: Explain why A and GTA are partially correct but differ in details.
+**Regole di Valutazione:**
+1. **A e GTA corrispondono perfettamente nel significato (possono essere formulate diversamente):**
+   Verdetto: `A is correct`
+   Spiegazione: Spiega perché A e GTA corrispondono nel significato.
 
-3. **A and GTA are different:**  
-   Verdict: `A is wrong`  
-   Explanation: Explain why A and GTA differ.
+2. **A e GTA sono diversi:**
+   Verdetto: `A is wrong`
+   Spiegazione: Spiega perché A e GTA differiscono.
 
-4. **A is "risposta mancante" (the model skipped the question):**  
-   Verdict: `Skipped Question`  
-   Explanation: State that the model skipped the question.
+3. **A fornisce una risposta incompleta o imprecisa rispetto a GTA, ma contiene informazioni parzialmente corrette.:**
+   Verdetto: `A is partially correct`
+   Spiegazione: Spiega perché A è parzialmente corretta.
 
-5. **A is N/A while GTA contains an answer:**  
-   Verdict: `Missing Answer`  
-   Explanation: State that A is missing while GTA provides an answer.
+4. **A è "domanda saltata" (il modello ha saltato la domanda):**
+   Verdetto: `Skipped Question`
+   Spiegazione: Indica che A è assente, il modello non ha fornito alcuna risposta..
 
-6. **A contains an answer while GTA is N/A:**  
-   Verdict: `Hallucination`  
-   Explanation: State that A provides an answer while GTA is N/A.
+5. **A è N/A mentre GTA contiene una risposta:**
+   Verdetto: `Missing Answer`
+   Spiegazione: Indica che A è mancante mentre GTA fornisce una risposta.
 
-**Output Format:**  
-Present your evaluation in the following XML format:  
+6. **A contiene una risposta mentre GTA è N/A:**  
+   Verdetto: `Hallucination`  
+   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), mentre GTA è N/A.  
+
+7. **A e GTA sono entrambi N/A:**
+   Verdetto: `A is correct`
+   Spiegazione: Indica che sia A che GTA sono N/A.
+
+**Formato di Output:**
+Presenta la tua valutazione nel seguente formato XML:
 ```xml
 <result>
-  <explanation>YOUR EXPLANATION GOES HERE.</explanation>
-  <verdict>ONE OF THE VERDICTS GOES HERE.</verdict>
+  <explanation>LA TUA SPIEGAZIONE QUI.</explanation>
+  <verdict>UNO DEI VERDETTI QUI.</verdict>
 </result>
 ```
 
-**Verdict Options:**  
-The verdict must be one of the following:  
+**Opzioni di Verdetto:**
+Il verdetto deve essere uno dei seguenti:
 ['A is correct', 'A is wrong', 'Skipped Question', 'Missing Answer', 'Hallucination', 'A is partially correct']
 
 ---
 
-**Examples:**
+**Esempi:**
 
-**Example 1:**  
-Q: Che lavoro faceva il richiedente?  
-A: Cuoco  
-GTA: lavorava come cuoco  
+**Esempio 1:**
+Q: Che lavoro faceva il richiedente?
+A: Cuoco
+GTA: lavorava come cuoco
 
 ```xml
 <result>
@@ -74,22 +79,22 @@ GTA: lavorava come cuoco
 </result>
 ```
 
-**Example 2:**  
-Q: Qual è la capitale della Francia?  
-A: risposta mancante  
-GTA: Parigi  
+**Esempio 2:**
+Q: Quanti figli aveva il richiedente?
+A: risposta mancante
+GTA: 2
 
 ```xml
 <result>
-  <explanation>A è "risposta mancante", il modello ha saltato la domanda.</explanation>
+  <explanation>A è "domanda saltata", il modello ha saltato la domanda.</explanation>
   <verdict>Skipped Question</verdict>
 </result>
 ```
 
-**Example 3:**  
-Q: Quanti pianeti ci sono nel sistema solare?  
-A: 8  
-GTA: N/A  
+**Esempio 3:**
+Q: Come è arrivato il richiedente in Italia?
+A: In aereo
+GTA: N/A
 
 ```xml
 <result>
@@ -98,10 +103,10 @@ GTA: N/A
 </result>
 ```
 
-**Example 4:**  
-Q: Chi ha scritto la Divina Commedia?  
-A: Dante Alighieri  
-GTA: Alessandro Manzoni  
+**Esempio 4:**
+Q: Qual è il nome della moglie del richiedente?
+A: Maria
+GTA: Anna
 
 ```xml
 <result>
@@ -110,10 +115,10 @@ GTA: Alessandro Manzoni
 </result>
 ```
 
-**Example 5:**  
-Q: Qual è il colore del cielo?  
-A: N/A  
-GTA: Blu  
+**Esempio 5:**
+Q: Quanti anni ha il richiedente?
+A: N/A
+GTA: 35
 
 ```xml
 <result>
@@ -122,24 +127,62 @@ GTA: Blu
 </result>
 ```
 
-**Example 6:**  
-Q: Dov'è nato il richiedente?  
-A: Tanta  
-GTA: Tanta, Governatorato di Santa  
+**Esempio 6:**
+Q: Il richiedente fa parte di una minoranza?
+A: No.
+GTA: N/A
 
 ```xml
 <result>
-  <explanation>A non è completa.</explanation>
+  <explanation>A fornisce una risposta mentre GTA è N/A.</explanation>
+  <verdict>Hallucination</verdict>
+</result>
+```
+
+**Esempio 7:**
+Q: Il richiedente è omosessuale?
+A: Si.
+GTA: N/A
+
+```xml
+<result>
+  <explanation>A fornisce una risposta mentre GTA è N/A.</explanation>
+  <verdict>Hallucination</verdict>
+</result>
+```
+
+**Esempio 8:**
+Q: Il richiedente è andato a scuola?
+A: N/A
+GTA: N/A
+
+```xml
+<result>
+  <explanation>A e GTA sono entrambe N/A.</explanation>
+  <verdict>A is correct</verdict>
+</result>
+```
+
+**Esempio 9:**
+Q: Perché la commissione non ritiene credibile la dichiarazione?
+A: Per via delle contraddizioni.
+GTA: Perché il richiedente si contraddice più volte descrivendo la sua fuga, menzionando di essere andato in Grecia, ma al tempo stesso di aver preso un barcone in Libia. 
+
+```xml
+<result>
+  <explanation>A risponde solo parzialmente alla domanda.</explanation>
   <verdict>A is partially correct</verdict>
 </result>
 ```
 
-**Your Task:**  
-Evaluate the following Q, A, and GTA according to the rules above. Provide your output in the specified XML format.  
+---
 
-Q: {prompt}  
-A: {response_a} 
-GTA: {response_b}  
+**Il Tuo Compito:**
+Valuta la seguente Q, A e GTA secondo le regole sopra indicate. Fornisci il tuo output nel formato XML specificato.
+
+Q: {prompt}
+A: {response_a}
+GTA: {response_b}
 
 """
 

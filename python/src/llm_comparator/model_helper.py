@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 from vertexai import generative_models
 from vertexai import language_models
-import tqdm.auto
+
 
 from llm_comparator import _logging
 
