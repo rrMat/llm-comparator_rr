@@ -84,7 +84,7 @@ def run(
       'examples': [
           {
               'input_text': input['prompt'],
-              'tags': ["to_be_reviewed"],
+              'tags': judgement['tags'],
               'output_text_a': input['response_a'],
               'output_text_b': input['response_b'],
               'score': judgement['score'],
