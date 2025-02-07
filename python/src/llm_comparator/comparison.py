@@ -74,6 +74,7 @@ def run(
       'metadata': {'custom_fields_schema': [
           {"name": "Case Number", "type": "category"},
           {"name": "Doc Type", "type": "category"},
+          {"name": "Model Name", "type": "category"},
       ]},
       'models': [{'name': name} for name in model_names],
       'examples': [
@@ -87,7 +88,8 @@ def run(
               'rationale_list': [], 
               'custom_fields': {
                   "Case Number": input["custom_fields"]["case_number"],
-                  "Doc Type" : input["custom_fields"]["doc_type"]
+                  "Doc Type" : input["custom_fields"]["doc_type"],
+                  "Model Name" : input["custom_fields"]["model_name"]
               },
           }
           for input, judgement in per_example_generator
