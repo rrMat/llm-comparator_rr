@@ -18,3 +18,5 @@ docs/documentation/.doctrees/**
 .tydi-venv/
 .venv/
 .vscode/
+.idea/
+llm-comparator-app-darwin-arm64/
