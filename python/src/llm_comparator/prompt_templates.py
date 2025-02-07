@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Prompt templates for the LLM Comparator script."""
+"""Prompt templates for the LLM Comparator script."""            
 
 DEFAULT_LLM_JUDGE_PROMPT_TEMPLATE = """
 
