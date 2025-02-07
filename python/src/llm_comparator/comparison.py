@@ -31,12 +31,8 @@ from llm_comparator import types
 def run(
     inputs: Sequence[types.LLMJudgeInput],
     judge: llm_judge_runner.LLMJudgeRunner,
-    # bulletizer: rationale_bullet_generator.RationaleBulletGenerator,
-    # clusterer: rationale_cluster_generator.RationaleClusterGenerator,
     model_names: Sequence[str] = ('A', 'B'),
     judge_opts: Optional[types.JsonDict] = None,
-    # bulletizer_opts: Optional[types.JsonDict] = None,
-    # clusterer_opts: Optional[types.JsonDict] = None,
 ) -> types.JsonDict:
   """Runs a comparison with LLM Comparator.
 
@@ -71,10 +67,6 @@ def run(
   """
 
   judgements = judge.run(inputs, **(judge_opts or {}))
-  # bullets = bulletizer.run(judgements, **(bulletizer_opts or {}))
-  # clusters, cluster_similarities = clusterer.run(
-  #     bullets, **(clusterer_opts or {})
-  # )
 
   per_example_generator = zip(inputs, judgements) #, cluster_similarities
 
