@@ -79,7 +79,10 @@ def run(
   per_example_generator = zip(inputs, judgements) #, cluster_similarities
 
   return {
-      'metadata': {'custom_fields_schema': []},
+      'metadata': {'custom_fields_schema': [
+          {"name": "Case Number", "type": "category"},
+          {"name": "Doc Type", "type": "category"},
+      ]},
       'models': [{'name': name} for name in model_names],
       'examples': [
           {
@@ -90,7 +93,10 @@ def run(
               'score': judgement['score'],
               'individual_rater_scores': judgement['individual_rater_scores'],
               'rationale_list': [], 
-              'custom_fields': {},
+              'custom_fields': {
+                  "Case Number": input["custom_fields"]["case_number"],
+                  "Doc Type" : input["custom_fields"]["doc_type"]
+              },
           }
           for input, judgement in per_example_generator
       ],
