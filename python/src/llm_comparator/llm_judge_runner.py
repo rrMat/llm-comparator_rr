@@ -38,7 +38,8 @@ _logger = _logging.logger
 
 DEFAULT_RATING_TO_SCORE_MAP = {
     'A is correct': 1.0,
-    'A is partially correct': 0.5,           
+    'A is incomplete': 0.5,
+    'Inference' : 0.5,
     'A is wrong': -1,         
     'Skipped Question': -0.5,      
     'Hallucination': -1.5,      

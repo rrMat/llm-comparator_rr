@@ -30,23 +30,27 @@ Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q) 
    Verdetto: `A is wrong`
    Spiegazione: Spiega perché A e GTA differiscono.
 
-3. **A fornisce una risposta incompleta o imprecisa rispetto a GTA, ma contiene informazioni parzialmente corrette.:**
-   Verdetto: `A is partially correct`
-   Spiegazione: Spiega perché A è parzialmente corretta.
+3. **A fornisce una risposta incompleta:**
+   Verdetto: `A is incomplete`
+   Spiegazione: Spiega perché A è incomplete.
+   
+4. **A fornisce aggiunge informazioni rispetto a GTA:**
+   Verdetto: `Inference`
+   Spiegazione: Spiega quali informazioni aggiunge A rispetto a GTA.
 
-4. **A è "domanda saltata" (il modello ha saltato la domanda):**
+5. **A è "domanda saltata" (il modello ha saltato la domanda):**
    Verdetto: `Skipped Question`
    Spiegazione: Indica che A è assente, il modello non ha fornito alcuna risposta..
 
-5. **A è N/A mentre GTA contiene una risposta:**
+6. **A è N/A mentre GTA contiene una risposta:**
    Verdetto: `Missing Answer`
    Spiegazione: Indica che A è mancante mentre GTA fornisce una risposta.
 
-6. **A contiene una risposta mentre GTA è N/A:**  
+7. **A contiene una risposta mentre GTA è N/A:**  
    Verdetto: `Hallucination`  
    Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), mentre GTA è N/A.  
 
-7. **A e GTA sono entrambi N/A:**
+8. **A e GTA sono entrambi N/A:**
    Verdetto: `A is correct`
    Spiegazione: Indica che sia A che GTA sono N/A.
 
@@ -61,7 +65,7 @@ Presenta la tua valutazione nel seguente formato XML:
 
 **Opzioni di Verdetto:**
 Il verdetto deve essere uno dei seguenti:
-['A is correct', 'A is wrong', 'Skipped Question', 'Missing Answer', 'Hallucination', 'A is partially correct']
+['A is correct', 'A is wrong', 'Skipped Question', 'Missing Answer', 'Hallucination', 'A is incomplete', 'Inference']
 
 ---
 
