@@ -23,18 +23,18 @@ Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q) 
 
 **Regole di Valutazione:**
 1. **A e GTA corrispondono perfettamente nel significato (possono essere formulate diversamente):**
-   Verdetto: `A is correct`
+   Verdetto: `Correct`
    Spiegazione: Spiega perché A e GTA corrispondono nel significato.
 
 2. **A e GTA sono diversi:**
-   Verdetto: `A is wrong`
+   Verdetto: `Wrong`
    Spiegazione: Spiega perché A e GTA differiscono.
 
 3. **A fornisce una risposta incompleta:**
-   Verdetto: `A is incomplete`
+   Verdetto: `Incomplete`
    Spiegazione: Spiega perché A è incomplete.
    
-4. **A fornisce aggiunge informazioni rispetto a GTA:**
+4. **A aggiunge informazioni rispetto a GTA:**
    Verdetto: `Inference`
    Spiegazione: Spiega quali informazioni aggiunge A rispetto a GTA.
 
@@ -51,7 +51,7 @@ Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q) 
    Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), mentre GTA è N/A.  
 
 8. **A e GTA sono entrambi N/A:**
-   Verdetto: `A is correct`
+   Verdetto: `Correct`
    Spiegazione: Indica che sia A che GTA sono N/A.
 
 **Formato di Output:**
@@ -65,7 +65,7 @@ Presenta la tua valutazione nel seguente formato XML:
 
 **Opzioni di Verdetto:**
 Il verdetto deve essere uno dei seguenti:
-['A is correct', 'A is wrong', 'Skipped Question', 'Missing Answer', 'Hallucination', 'A is incomplete', 'Inference']
+['Correct', 'Wrong', 'Skipped Question', 'Missing Answer', 'Hallucination', 'Incomplete', 'Inference']
 
 ---
 

@@ -34,13 +34,11 @@ _GenerationModelHelper = model_helper.GenerationModelHelper
 _logger = _logging.logger
 
 
-
-
 DEFAULT_RATING_TO_SCORE_MAP = {
-    'A is correct': 1.0,
-    'A is incomplete': 0.5,
+    'Correct': 1.0,
+    'Incomplete': 0.5,
     'Inference' : 0.5,
-    'A is wrong': -1,         
+    'Wrong': -1,
     'Skipped Question': -0.5,      
     'Hallucination': -1.5,      
     'Missing Answer': 0,
