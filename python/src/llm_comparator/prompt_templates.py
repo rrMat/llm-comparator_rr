@@ -46,13 +46,7 @@ Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q) 
    Verdetto: `Missing Answer`
    Spiegazione: Indica che A è mancante mentre GTA fornisce una risposta.
 
-7. **A contiene una risposta mentre GTA è N/A:**  
-   Verdetto: `Hallucination`  
-   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), mentre GTA è N/A.  
 
-8. **A e GTA sono entrambi N/A:**
-   Verdetto: `Correct`
-   Spiegazione: Indica che sia A che GTA sono N/A.
 
 **Formato di Output:**
 Presenta la tua valutazione nel seguente formato XML:
@@ -65,7 +59,7 @@ Presenta la tua valutazione nel seguente formato XML:
 
 **Opzioni di Verdetto:**
 Il verdetto deve essere uno dei seguenti:
-['Correct', 'Wrong', 'Skipped Question', 'Missing Answer', 'Hallucination', 'Incomplete', 'Inference']
+['Correct', 'Wrong', 'Skipped Question', 'Missing Answer', 'Incomplete', 'Inference']
 
 ---
 
@@ -79,7 +73,7 @@ GTA: lavorava come cuoco
 ```xml
 <result>
   <explanation>A e GTA hanno lo stesso significato.</explanation>
-  <verdict>A is correct</verdict>
+  <verdict>Correct</verdict>
 </result>
 ```
 
@@ -96,18 +90,6 @@ GTA: 2
 ```
 
 **Esempio 3:**
-Q: Come è arrivato il richiedente in Italia?
-A: In aereo
-GTA: N/A
-
-```xml
-<result>
-  <explanation>A fornisce una risposta mentre GTA è N/A.</explanation>
-  <verdict>Hallucination</verdict>
-</result>
-```
-
-**Esempio 4:**
 Q: Qual è il nome della moglie del richiedente?
 A: Maria
 GTA: Anna
@@ -115,11 +97,11 @@ GTA: Anna
 ```xml
 <result>
   <explanation>A e GTA sono diversi.</explanation>
-  <verdict>A is wrong</verdict>
+  <verdict>Wrong</verdict>
 </result>
 ```
 
-**Esempio 5:**
+**Esempio 4:**
 Q: Quanti anni ha il richiedente?
 A: N/A
 GTA: 35
@@ -131,43 +113,7 @@ GTA: 35
 </result>
 ```
 
-**Esempio 6:**
-Q: Il richiedente fa parte di una minoranza?
-A: No.
-GTA: N/A
-
-```xml
-<result>
-  <explanation>A fornisce una risposta mentre GTA è N/A.</explanation>
-  <verdict>Hallucination</verdict>
-</result>
-```
-
-**Esempio 7:**
-Q: Il richiedente è omosessuale?
-A: Si.
-GTA: N/A
-
-```xml
-<result>
-  <explanation>A fornisce una risposta mentre GTA è N/A.</explanation>
-  <verdict>Hallucination</verdict>
-</result>
-```
-
-**Esempio 8:**
-Q: Il richiedente è andato a scuola?
-A: N/A
-GTA: N/A
-
-```xml
-<result>
-  <explanation>A e GTA sono entrambe N/A.</explanation>
-  <verdict>A is correct</verdict>
-</result>
-```
-
-**Esempio 9:**
+**Esempio 5:**
 Q: Perché la commissione non ritiene credibile la dichiarazione?
 A: Per via delle contraddizioni.
 GTA: Perché il richiedente si contraddice più volte descrivendo la sua fuga, menzionando di essere andato in Grecia, ma al tempo stesso di aver preso un barcone in Libia. 
@@ -175,7 +121,19 @@ GTA: Perché il richiedente si contraddice più volte descrivendo la sua fuga, m
 ```xml
 <result>
   <explanation>A risponde solo parzialmente alla domanda.</explanation>
-  <verdict>A is partially correct</verdict>
+  <verdict>Incomplete</verdict>
+</result>
+```
+
+**Esempio 6:**
+Q: Che paesi ha visitato il richiedente?
+A: Sudan, Libia, Algeria.
+GTA: Sudan, Libia.
+
+```xml
+<result>
+  <explanation>A aggiunge informazioni rispetto a GTA.</explanation>
+  <verdict>Inference</verdict>
 </result>
 ```
 
@@ -190,287 +148,94 @@ GTA: {response_b}
 
 """
 
-DEFAULT_PROMPT_TEMPLATE_FOR_BULLETING = """
-In this task, you will be provided a set of rationales about how a single response compares to a ground truth answer for a given prompt.
+DEFAULT_LLM_JUDGE_WITH_REFERENCE_PROMPT_TEMPLATE = """
+### **Prompt del Giudice LLM con Attività di Tagging**
 
-Your goal is to summarize the provided set of rationales into a bulleted list of short phrases in an XML format.
+**Compito:**
+Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q), una risposta di riferimento (GTA) e il testo (RT) usato per formulare la risposta.
 
-Provide up to {up_to_size} phrases that cover the important rationales provided.
+**Regole di Valutazione:**
+1. **A e GTA sono entrambi N/A:**
+   Verdetto: `True Negative`
+   Spiegazione: Indica che sia A che GTA sono N/A (compresi "Sì" o "No").
+   
+2. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è inventata:**  
+   Verdetto: `Hallucination`  
+   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che non ha riscontro in RT.  
 
-Detailed instructions:
-- Focus on describing the strengths or weaknesses of the response compared to the ground truth.
-- For each phrase, if you talk about strengths of the response, start with a (lower-cased) verb (e.g., "provides more details").
-- If you talk about weaknesses of the response, you may start with "does not" followed by a verb (e.g., "does not match the ground truth").
-- Each phrase should use less than 10 words.
-- It is VERY important that your phrases MUST NOT mention the response explicitly (e.g., do not say [Response A] or [Ground Truth]).
+3. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT.**  
+   Verdetto: `Inference`  
+   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che è stata inferta da RT. 
 
-Here are several examples of rationales and their summaries in the XML format:
+To differentiate between Inference and Hallucination follow this line of thought: 
+- Does RT contain any clues, even if indirect, that would allow a reader to reasonably infer the answer? 
+-- If yes, label that answer as an inference.
+- Is the answer introducing details that have no trace whatsoever in RT? 
+-- If yes, mark that answer as a hallucination.
 
-==
-**Example 1** (Strengths Only):
+**Formato di Output:**
+Presenta la tua valutazione nel seguente formato XML:
+```xml
+<result>
+  <explanation>LA TUA SPIEGAZIONE QUI.</explanation>
+  <verdict>UNO DEI VERDETTI QUI.</verdict>
+</result>
+```
 
-Rationales:
-- The response closely matches the ground truth in details.
-- The response paraphrases the ground truth effectively without changing meaning.
-- The response provides additional useful examples not in the ground truth.
+**Opzioni di Verdetto:**
+Il verdetto deve essere uno dei seguenti:
+['True Negative', 'Hallucination', 'Inference']
 
-Rationale Summary formatted in XML:
-<summary>
-  <reason>matches the ground truth details</reason>
-  <reason>paraphrases effectively without changing meaning</reason>
-  <reason>provides additional useful examples</reason>
-</summary>
+---
+**Esempi:**
 
-==
-**Example 2** (Weaknesses Only):
+**Esempio 1:**
+Q: Il richiedente è andato a scuola?
+A: N/A
+GTA: N/A
+RT: N/A
 
-Rationales:
-- The response contains less information than the ground truth.
-- The response fails to address key points mentioned in the ground truth.
-- The response includes irrelevant details not supported by the ground truth.
+```xml
+<result>
+  <explanation>A e GTA sono entrambe N/A.</explanation>
+  <verdict>True Negative</verdict>
+</result>
+```
 
-Rationale Summary formatted in XML:
-<summary>
-  <reason>contains less information</reason>
-  <reason>does not address key points</reason>
-  <reason>includes irrelevant unsupported details</reason>
-</summary>
+**Esempio 2:**
+Q: Dove dimora il richiedente? 
+A: Bamako
+GTA: N/A
+RT: Poi un giorno sono uscito, avevo fatto delle fotocopie dei miei documenti (carta d'identità, passaporto scaduto). Mentre ero fuori, la polizia è andata a casa di Djibril Follana per cercarmi. Se mi avessero visto mi avrebbero ucciso. Poi Djibril Fofana mi ha chiamato e mi ha spiegato che la polizia mi cercava per uccidermi. A quel punto sono scappato e sono andato a Bamako.
 
-==
-**Example 3** (Mixed Strengths and Weaknesses):
+```xml
+<result>
+  <explanation>A è stata dedotta da RT, viene menzionato il fatto che "sono andato a Bamako", ma non che dimora lì. </explanation>
+  <verdict>Inference</verdict>
+</result>
+```
 
-Rationales:
-- The response contains the same information as the ground truth but is less concise.
-- The response provides relevant extra details not in the ground truth.
-- The response introduces a minor factual error not in the ground truth.
+**Esempio 3:**
+Q: Che lavoro svolgono o svolgevano i familiari del richiedente?
+A: I genitori facevano i pastori, mentre il fratello il fabbro.
+GTA: N/A
+RT: Il richiedente ricorda di essere nato e cresciuto a Trantimou, Regione di Kayes, Mali, e di aver lavorato come cuoco. Ricorda di avere due fratelli, uno più grande e uno più piccolo, e di non essere sposato né avere figli. Ricorda di aver frequentato la scuola fino all'età di 8 anni. Ricorda di aver vissuto in Gabon per un anno e tre mesi, lavorando come muratore, e di aver litigato con suo fratello per motivi economici. 
+```xml
+<result>
+  <explanation>A non trova riscontro in RT, è stata inventata. </explanation>
+  <verdict>Hallucination</verdict>
+</result>
+```
 
-Rationale Summary formatted in XML:
-<summary>
-  <reason>matches the ground truth but is less concise</reason>
-  <reason>provides relevant extra details</reason>
-  <reason>introduces a minor factual error</reason>
-</summary>
+---
 
-==
-Now I will provide information about the rationales comparing the response to the ground truth.
+**Il Tuo Compito:**
+Valuta la seguente Q, A, RT e GTA secondo le regole sopra indicate. Fornisci il tuo output nel formato XML specificato.
 
-Rationales:
-{rationales}
+Q: {prompt}
+A: {response_a}
+RT: {text_reference}
+GTA: {response_b}
 
-Please summarize the rationales in the XML format like the examples above and based on the detailed instructions above.
-Directly start with the XML starting with <summary>.
-
-Rationale Summary formatted in XML:
 """
 
-
-DEFAULT_PROMPT_TEMPLATE_FOR_PARAPHRASING = """Your task it to paraphrase the following phrase in three different ways.
-The given phrase is about why a certain paragraph is better or worse than another.
-When paraphrasing, do not change the meaning much.
-You should minimally edit the phrase, such as by changing one or two words.
-If the phrase starts with a verb, your paraphrased results must start with a lower cased verb too;
-If the phrase starts with "does not" followed by a verb, your paraphrased results must start with "does not" followed by a lower cased verb too.
-
-Phrase: "{bullet_phrase}"
-
-Use the following XML format for your paraphrased phrases:
-<phrases>
-  <phrase>...</phrase>
-  <phrase>...</phrase>
-  <phrase>...</phrase>
-</phrases>
-
-Three paraphrased phrases in the above XML format:"""
-
-
-DEFAULT_PROMPT_TEMPLATE_FOR_CLUSTERING = """In this task, you will be given a set of phrases that describe rationales about how a single response compares to a ground truth answer.
-
-Below I provide a list of phrases.
-
-===== BEGINNING OF PHRASES =====
-{rationales}
-===== END OF PHRASES =====
-
-Your goal is to cluster the provided rationale phrases into {num_clusters} groups that are diverse and representative, and then identify the title for each of the {num_clusters} clusters.  
-You will return these cluster titles as an XML format like below. DO NOT provide more than {num_clusters} titles.
-
-When doing this, follow the instructions below to the extent possible:
-- Each title must concisely describe one specific aspect in 2-4 words.
-- Avoid using "and" in your titles (e.g., instead of "matches information and adds details", use "matches information").
-- Provide distinct and mutually exclusive titles that clearly separate each group’s theme.
-- Vary the structure of your titles. For example:
-  - Start some titles with "is..." (e.g., "is more precise").
-  - Start others with "provides" or "does not" (e.g., "provides additional examples", "does not match key points").
-- Each title MUST begin with a lower-cased verb (e.g., "is...", NOT "Is...") or "does not" followed by a verb.
-
-The format of your output will be:
-
-<groups>
- {few_examples}
-</groups>
-
-The titles for {num_clusters} groups are:
-"""
-
-DEFAULT_FEW_EXAMPLES_FOR_CLUSTERING = [
-    'matches the key details',
-    'is less concise',
-    'does not address all key points',
-    'introduces unsupported information',
-    'paraphrases effectively without changing meaning',
-    'provides useful extra context',
-    'does not match the tone of the ground truth',
-    'fails to provide sufficient details',
-    'answers when ground truth provides no answer',
-    'does not answer when ground truth provides an answer',
-    'provides no answer when required',
-    'fails to handle unanswerable questions appropriately',
-]
-
-
-# DEFAULT_LLM_JUDGE_PROMPT_TEMPLATE = """You will be given a question and two responses, Response A and Response B, provided by two AI assistants doing Question Answering.
-# Your task is to act as a judge by determining which response is answering the question better.
-
-# When you are evaluating, you can consider the following criteria:
-# - Does the response fully answer the user's question?
-# - Does the response address the key points in the question?
-# - Is the response clearly written and avoiding unnecessary information?
-# - Does the response contain factual information?
-# - Does the response answer the question in the required format? (e.g., if the question asks for (SI, NO, N/A), does the response provide that?)
-
-# You will provide a short explanation and your final rating (verdict) in the following XML format.
-
-# <result>
-#   <explanation>YOUR EXPLANATION GOES HERE.</explanation>
-#   <verdict>A is slightly better</verdict>
-# </result>
-
-# Your explanation can compare the two responses and describe your rationale behind the rating.
-# It should be about two or three sentences.
-# Your final rating (verdict) must be in 7-point Likert and must be exactly one of the following:
-# ['A is much better', 'A is better', 'A is slightly better', 'same', 'B is slightly better', 'B is better', 'B is much better'].
-
-# [User Question]
-# {prompt}
-
-# [The Start of Response A]
-# {response_a}
-# [The End of Response A]
-
-# [The Start of Response B]
-# {response_b}
-# [The End of Response B]
-
-# [Result with explanation and verdict in the above XML format]
-# """
-
-
-# DEFAULT_PROMPT_TEMPLATE_FOR_BULLETING = """In this task, you will be provided a set of rationales about why one of the two responses (A and B) to a given prompt is better than the other.
-
-# Your goal is to summarize the provided set of rationales into a bulleted list of short phrases in an XML format.
-
-# Provide up to {up_to_size} phrases that cover the important rationales provided.
-
-# Detailed instructions:
-# - You will be provided which one is better: either A or B. You need to describe why the better side is better or the other side is worse.
-# - For each phrase, if you talk about why the better side is better, start with a (lower-cased) verb; if you talk about why the other side is worse, you may start with "does not" followed by a verb.
-# - Each phrase should use less than 10 words.
-# - It is VERY important that your phrases MUST NOT mention A or B (e.g., do not say [Response A] or [Response B]).
-
-# Here I give you two examples.
-
-# ==
-# Example 1:
-
-# Which is better (A or B): A
-
-# Rationales:
-# - The prompt asked for hundreds of ideas, and [Response B] does not provide enough ideas. [Response A] provides lots of creative ideas.
-# - Both Responses are of good length. [Response A] is slightly more comprehensive and detailed in its answer and provides some helpful tips at the end.
-# - Both responses were great and contained mostly the same information. Response A included some more ideas about food and drink and also included prep tips so I think it was a little more helpful.
-# - [Response B] gives ideas are too generic.
-# - [Response A] is great; it not only provides many fun and creative ideas for hosting a child's birthday party, but it also adds helpful advice on general party preparation and organization.
-# - Both responses have some good suggestions for a birthday party. [Response A] has more ideas as well as some suggestions for food and drink as well as tips for preparation and organizing.
-
-# Rationale Summary formatted in XML:
-# <summary>
-#   <reason>provides more creative ideas</reason>
-#   <reason>provides more helpful tips at the end</reason>
-#   <reason>does not give generic ideas</reason>
-# </summary>
-
-# ==
-# Example 2:
-
-# Which is better (A or B): B
-
-# Rationales:
-# - [Response B] is more helpful and provide more useful ways for the poem's author to enhance the poem. It also has better potential title options than [Response A].
-# - The analysis that [Response B] did was more helpful in critiquing the poem and providing useful suggestions. [Response A] offered suggestions, but not in a way that was easy to implement.
-# - [Response B] gave the user constructive feedback about their poem, not just praise, making it a better overall response. Response A was a bit repetitive.
-# - [Response B] offered better title suggestions.
-# - [Response A] provides inaccurate information.
-# - [Response B] was slightly better because it gave a much more thorough analysis and critique of the poem. It provided more context and detail in the critique than [Response B] did, giving better suggestions and examples of specific parts.
-
-# Rationale Summary formatted in XML:
-# <summary>
-#   <reason>provides constructive feedback</reason>
-#   <reason>does not provide inaccurate information</reason>
-#   <reason>gives a more thorough analysis with details</reason>
-# </summary>
-
-# ==
-# Now I will provide information of which is better and rationales.
-
-# Which is better: {winner}
-
-# Rationales:
-# {rationales}
-
-# Please summarize the rationales in the XML format like the examples above and based on the detailed instruction above.
-# Directly start with the XML starting with <summary>.
-
-# Rationale Summary formatted in XML:"""
-
-
-
-# DEFAULT_PROMPT_TEMPLATE_FOR_CLUSTERING = """In this task, you will be given a set of phrases that describe rationales of why one text is better or worse than the other.
-
-# Below I provide a list of phrases.
-
-# ===== BEGINNING OF PHRASES =====
-# {rationales}
-# ===== END OF PHRASES =====
-
-# Your goal is to cluster the provided rationale phrases into {num_clusters} groups that are diverse and representative, and then identify the title for each of the {num_clusters} clusters.
-# You will return these cluster titles as an XML format like below. DO NOT provide more than {num_clusters} titles.
-
-# When doing this, follow the instructions below to the extent possible:
-# - Have each title concisely about 2-4 words.
-# - Describe one aspect clearly. For each title, DO NOT use "and" in your phrase (e.g., instead of "is more creative and concise", you should say "is more creative").
-# - Provide group titles that are distinct enough to each other (mutually exclusive).
-# - Avoid having many group titles using too similar structures (e.g., do not always say "is more ADJECTIVE", but start sometimes with "provides" or "offers" too).
-# - Each title MUST begin with a lower-cased verb (e.g., "is...", NOT "Is...") or "does not" followed by a verb.
-
-# The format of your output will be like:
-# <groups>
-# {few_examples}
-# </groups>
-
-# The titles for {num_clusters} groups are:"""
-
-
-
-
-# DEFAULT_FEW_EXAMPLES_FOR_CLUSTERING = [
-#     'is better organized',
-#     'is better structured',
-#     'provides step-by-step procedure',
-#     'is more accurate',
-#     'does not provide inaccurate information',
-#     'provides diverse options',
-#     'provides external links',
-#     'provides creative solutions',
-#     'considers various factors',
-#     'refuses to answer inapproprite questions',
-# ]

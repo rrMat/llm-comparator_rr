@@ -16,6 +16,7 @@
 
 from collections.abc import Sequence
 import math
+import re
 from typing import Optional
 
 from llm_comparator import _logging
@@ -42,6 +43,7 @@ DEFAULT_RATING_TO_SCORE_MAP = {
     'Skipped Question': -0.5,      
     'Hallucination': -1.5,      
     'Missing Answer': 0,
+    'True Negative': 1,
 }
 
 
@@ -51,7 +53,7 @@ class LLMJudgeRunner:
   def __init__(
       self,
       generation_model_helper: _GenerationModelHelper,
-      llm_judge_prompt_template: str = prompt_templates.DEFAULT_LLM_JUDGE_PROMPT_TEMPLATE,
+      llm_judge_prompt_template=None,
       rating_to_score_map: Optional[dict[str, float]] = None,
   ):
     """Initializes the LLM judge runner.
@@ -61,6 +63,9 @@ class LLMJudgeRunner:
       llm_judge_prompt_template: Prompt template for LLM judge.
       rating_to_score_map: Map from rating label text to score.
     """
+    if llm_judge_prompt_template is None:
+        llm_judge_prompt_template = [prompt_templates.DEFAULT_LLM_JUDGE_WITH_REFERENCE_PROMPT_TEMPLATE,
+                                     prompt_templates.DEFAULT_LLM_JUDGE_PROMPT_TEMPLATE]
     self.generation_model_helper = generation_model_helper
     self.llm_judge_prompt_template = llm_judge_prompt_template
     if rating_to_score_map is None:
@@ -68,11 +73,17 @@ class LLMJudgeRunner:
     self.rating_to_score_map = rating_to_score_map
 
   def create_prompt_for_judge(
-      self, prompt: str, response_a: str, response_b: str
+      self, prompt: str, response_a: str, response_b: str, text_reference: str
   ) -> str:
-    prompt_for_judge = self.llm_judge_prompt_template.format(
-        prompt=prompt, response_a=response_a, response_b=response_b
-    )
+    if re.search('N\/A\b', response_b):
+        prompt_for_judge = self.llm_judge_prompt_template[0].format(
+            prompt=prompt, response_a=response_a, response_b=response_b, text_reference=text_reference
+        )
+    else:
+        prompt_for_judge = self.llm_judge_prompt_template[1].format(
+            prompt=prompt, response_a=response_a, response_b=response_b
+        )
+
     return prompt_for_judge
 
   def create_inputs_with_repeats_for_judge(
@@ -89,6 +100,7 @@ class LLMJudgeRunner:
             'prompt': ex['prompt'],
             'response_a': ex['response_a'],
             'response_b': ex['response_b'],
+            "text_reference" : ex["custom_fields"]["text_reference"]
             'is_flipped': False,
         })
     _logger.info('Created %d inputs for LLM judge.', len(inputs_with_repeats))
@@ -98,7 +110,7 @@ class LLMJudgeRunner:
     """Runs LLM judge."""
     judge_inputs = [
         self.create_prompt_for_judge(
-            input['prompt'], input['response_a'], input['response_b']
+            input['prompt'], input['response_a'], input['response_b'], input['text_reference']
         )
         for input in inputs
     ]
