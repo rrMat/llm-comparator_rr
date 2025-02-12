@@ -75,6 +75,7 @@ def run(
           {"name": "Case Number", "type": "category"},
           {"name": "Doc Type", "type": "category"},
           {"name": "Model Name", "type": "category"},
+          {"name": "Text Reference", "type" : "text"},
       ]},
       'models': [{'name': name} for name in model_names],
       'examples': [
@@ -89,7 +90,8 @@ def run(
               'custom_fields': {
                   "Case Number": input["custom_fields"]["case_number"],
                   "Doc Type" : input["custom_fields"]["doc_type"],
-                  "Model Name" : input["custom_fields"]["model_name"]
+                  "Model Name" : input["custom_fields"]["model_name"],
+                  "Text Reference" : input["custom_fields"]["text_reference"]
               },
           }
           for input, judgement in per_example_generator
