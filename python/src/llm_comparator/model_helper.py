@@ -60,8 +60,10 @@ class HuggingFaceGenerationModelHelper(GenerationModelHelper):
     """HuggingFace text generation model helper."""
 
     def __init__(self, model_name: str = 'EleutherAI/gpt-neo-2.7B', use_8bit: bool = False, use_4bit: bool = False):
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+        # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("mps" if torch.backends.mps.is_available() else
+                                   "cuda" if torch.cuda.is_available() else "cpu")
+
         if use_4bit or use_8bit:
             quantization_config = BitsAndBytesConfig(
                 load_in_4bit=use_4bit,
@@ -74,8 +76,14 @@ class HuggingFaceGenerationModelHelper(GenerationModelHelper):
                 device_map='auto'
             ).to(self.device)
         else:
-            self.generator = pipeline('text-generation', model=model_name)
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            if self.device.type == 'mps':
+                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                ).to(self.device)
+            else:
+                self.generator = pipeline('text-generation', model=model_name)
+                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def predict(
         self,

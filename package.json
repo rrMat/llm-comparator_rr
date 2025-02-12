@@ -27,6 +27,7 @@
     "devDependencies": {
         "@web/dev-server": "0.4.4",
         "electron": "^34.1.1",
+        "electron-builder": "^25.1.8",
         "electron-packager": "^17.1.2",
         "esbuild": "0.20.2",
         "esbuild-plugin-lit-css": "3.0.0"
