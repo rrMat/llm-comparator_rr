@@ -19,4 +19,4 @@ docs/documentation/.doctrees/**
 .venv/
 .vscode/
 .idea/
-llm-comparator-app-darwin-arm64/
+llm-comparator**
