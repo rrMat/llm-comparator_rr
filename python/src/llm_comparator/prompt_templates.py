@@ -126,15 +126,27 @@ Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q),
    Verdetto: `Hallucination`  
    Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che non ha riscontro in RT.  
 
-2. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT.**  
-   Verdetto: `Inference`  
-   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che è stata inferta da RT. 
+2. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT ma NON è pertinente alla domanda Q:**  
+   Verdetto: `Hallucination`  
+   Spiegazione: Indica che A è stata dedotta da RT, ma non risponde direttamente alla domanda Q. Anche se l'informazione è presente in RT, se non è rilevante per la domanda, viene considerata come una distorsione del contesto e quindi classificata come Hallucination.  
 
-To differentiate between Inference and Hallucination follow this line of thought: 
-- Does RT contain any clues, even if indirect, that would allow a reader to reasonably infer the answer? 
--- If yes, label that answer as an inference.
-- Is the answer introducing details that have no trace whatsoever in RT? 
--- If yes, mark that answer as a hallucination.
+3. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT ed è pertinente alla domanda Q:**  
+   Verdetto: `Inference`  
+   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che è stata inferta da RT e risponde direttamente alla domanda Q.  
+   
+4. **A non è rilevante rispetto alla domanda Q**
+    Verdetto: `Hallucination` 
+    Spiegazione: A non risponde a Q, indipendentemente da RT la risposta A è frutto di Hallucination. 
+
+**Linea Guida per Differenziare Inference e Hallucination:**
+- **Pertinenza alla Domanda:** 
+  - Se l'informazione in A è dedotta da RT ma non risponde alla domanda Q, è **Hallucination**.
+  - Se l'informazione in A è dedotta da RT e risponde direttamente alla domanda Q, è **Inference**.
+
+- **Traccia nel Testo di Riferimento (RT):**
+  - Se A introduce dettagli che non hanno alcuna traccia in RT, è **Hallucination**.
+  - Se RT contiene indizi, anche indiretti, che permettono di inferire ragionevolmente la risposta, è **Inference**.
+
 
 **Formato di Output:**
 Presenta la tua valutazione nel seguente formato XML:
@@ -168,7 +180,7 @@ RT: Il richiedente ricorda di essere nato e cresciuto a Trantimou, Regione di Ka
 Q: Dove dimora il richiedente? 
 A: Bamako
 GTA: N/A
-RT: Poi un giorno sono uscito, avevo fatto delle fotocopie dei miei documenti (carta d'identità, passaporto scaduto). Mentre ero fuori, la polizia è andata a casa di Djibril Follana per cercarmi. Se mi avessero visto mi avrebbero ucciso. Poi Djibril Fofana mi ha chiamato e mi ha spiegato che la polizia mi cercava per uccidermi. A quel punto sono scappato e sono andato a Bamako.
+RT: Poi un giorno sono uscito, avevo fatto delle fotocopie dei miei documenti (carta d'identità, passaporto scaduto). Mentre ero fuori, la polizia è andata a casa di Lori Doli per cercarmi. Se mi avessero visto mi avrebbero ucciso. Poi Lori Doli mi ha chiamato e mi ha spiegato che la polizia mi cercava per uccidermi. A quel punto sono scappato e sono andato a Bamako.
 
 ```xml
 <result>
@@ -176,6 +188,30 @@ RT: Poi un giorno sono uscito, avevo fatto delle fotocopie dei miei documenti (c
   <verdict>Inference</verdict>
 </result>
 ```
+
+**Esempio 3:**
+Q: Qual è il nome del fratello maggiore del richiedente?
+A: Lori Doli
+GTA: N/A
+RT: Poi un giorno sono uscito, avevo fatto delle fotocopie dei miei documenti (carta d'identità, passaporto scaduto). Mentre ero fuori, la polizia è andata a casa di Lori Doli per cercarmi. Se mi avessero visto mi avrebbero ucciso. Poi Lori Doli mi ha chiamato e mi ha spiegato che la polizia mi cercava per uccidermi. A quel punto sono scappato e sono andato a Bamako.
+
+```xml
+<result>
+  <explanation>A è stata dedotta da RT, ma non risponde direttamente alla domanda Q. Il testo non specifica che Lori Doli è il fratello maggiore del richiedente, quindi la risposta è fuorviante e non pertinente alla domanda.</explanation>
+  <verdict>Hallucination</verdict>
+</result>
+```
+
+**Esempio 4:**
+Q: Perché la commissione ritiene attendibili le circostanze relative al fatto che il commerciante aveva fatto arrestare il richiedente?
+A: Il richiedente non ha rivolto alcuna denuncia o richiesta di protezione a nessuna autorità civile o religiosa del suo Paese per contrastare le minacce dello zio.
+GTA: N/A
+RT: CONSIDERATO che il richiedente dichiara di non essersi rivolto ad alcuna autorità civile o religiosa del suo Paese per contrastare le minacce dello zio.
+
+<result>
+  <explanation>A non è pertinente alla domanda Q, poiché parla dello zio invece del commerciante. Nonostante A sia stata dedotta da RT, non risponde direttamente alla domanda Q.</explanation>
+  <verdict>Hallucination</verdict>
+</result>
 
 ---
 
