@@ -38,15 +38,6 @@ Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q) 
    Verdetto: `Inference`
    Spiegazione: Spiega quali informazioni aggiunge A rispetto a GTA.
 
-5. **A è "domanda saltata" (il modello ha saltato la domanda):**
-   Verdetto: `Skipped Question`
-   Spiegazione: Indica che A è assente, il modello non ha fornito alcuna risposta..
-
-6. **A è N/A mentre GTA contiene una risposta:**
-   Verdetto: `Missing Answer`
-   Spiegazione: Indica che A è mancante mentre GTA fornisce una risposta.
-
-
 
 **Formato di Output:**
 Presenta la tua valutazione nel seguente formato XML:
@@ -59,7 +50,7 @@ Presenta la tua valutazione nel seguente formato XML:
 
 **Opzioni di Verdetto:**
 Il verdetto deve essere uno dei seguenti:
-['Correct', 'Wrong', 'Skipped Question', 'Missing Answer', 'Incomplete', 'Inference']
+['Correct', 'Wrong', 'Incomplete', 'Inference']
 
 ---
 
@@ -78,18 +69,6 @@ GTA: lavorava come cuoco
 ```
 
 **Esempio 2:**
-Q: Quanti figli aveva il richiedente?
-A: risposta mancante
-GTA: 2
-
-```xml
-<result>
-  <explanation>A è "domanda saltata", il modello ha saltato la domanda.</explanation>
-  <verdict>Skipped Question</verdict>
-</result>
-```
-
-**Esempio 3:**
 Q: Qual è il nome della moglie del richiedente?
 A: Maria
 GTA: Anna
@@ -101,19 +80,7 @@ GTA: Anna
 </result>
 ```
 
-**Esempio 4:**
-Q: Quanti anni ha il richiedente?
-A: N/A
-GTA: 35
-
-```xml
-<result>
-  <explanation>A è N/A mentre GTA fornisce una risposta.</explanation>
-  <verdict>Missing Answer</verdict>
-</result>
-```
-
-**Esempio 5:**
+**Esempio 3:**
 Q: Perché la commissione non ritiene credibile la dichiarazione?
 A: Per via delle contraddizioni.
 GTA: Perché il richiedente si contraddice più volte descrivendo la sua fuga, menzionando di essere andato in Grecia, ma al tempo stesso di aver preso un barcone in Libia. 
@@ -125,7 +92,7 @@ GTA: Perché il richiedente si contraddice più volte descrivendo la sua fuga, m
 </result>
 ```
 
-**Esempio 6:**
+**Esempio 4:**
 Q: Che paesi ha visitato il richiedente?
 A: Sudan, Libia, Algeria.
 GTA: Sudan, Libia.
@@ -155,15 +122,11 @@ DEFAULT_LLM_JUDGE_WITH_REFERENCE_PROMPT_TEMPLATE = """
 Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q), una risposta di riferimento (GTA) e il testo (RT) usato per formulare la risposta.
 
 **Regole di Valutazione:**
-1. **A e GTA sono entrambi N/A:**
-   Verdetto: `True Negative`
-   Spiegazione: Indica che sia A che GTA sono N/A (compresi "Sì" o "No").
-   
-2. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è inventata:**  
+1. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è inventata:**  
    Verdetto: `Hallucination`  
    Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che non ha riscontro in RT.  
 
-3. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT.**  
+2. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT.**  
    Verdetto: `Inference`  
    Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che è stata inferta da RT. 
 
@@ -184,21 +147,20 @@ Presenta la tua valutazione nel seguente formato XML:
 
 **Opzioni di Verdetto:**
 Il verdetto deve essere uno dei seguenti:
-['True Negative', 'Hallucination', 'Inference']
+['Hallucination', 'Inference']
 
 ---
 **Esempi:**
 
 **Esempio 1:**
-Q: Il richiedente è andato a scuola?
-A: N/A
+Q: Che lavoro svolgono o svolgevano i familiari del richiedente?
+A: I genitori facevano i pastori, mentre il fratello il fabbro.
 GTA: N/A
-RT: N/A
-
+RT: Il richiedente ricorda di essere nato e cresciuto a Trantimou, Regione di Kayes, Mali, e di aver lavorato come cuoco. Ricorda di avere due fratelli, uno più grande e uno più piccolo, e di non essere sposato né avere figli. Ricorda di aver frequentato la scuola fino all'età di 8 anni. Ricorda di aver vissuto in Gabon per un anno e tre mesi, lavorando come muratore, e di aver litigato con suo fratello per motivi economici. 
 ```xml
 <result>
-  <explanation>A e GTA sono entrambe N/A.</explanation>
-  <verdict>True Negative</verdict>
+  <explanation>A non trova riscontro in RT, è stata inventata. </explanation>
+  <verdict>Hallucination</verdict>
 </result>
 ```
 
@@ -212,18 +174,6 @@ RT: Poi un giorno sono uscito, avevo fatto delle fotocopie dei miei documenti (c
 <result>
   <explanation>A è stata dedotta da RT, viene menzionato il fatto che "sono andato a Bamako", ma non che dimora lì. </explanation>
   <verdict>Inference</verdict>
-</result>
-```
-
-**Esempio 3:**
-Q: Che lavoro svolgono o svolgevano i familiari del richiedente?
-A: I genitori facevano i pastori, mentre il fratello il fabbro.
-GTA: N/A
-RT: Il richiedente ricorda di essere nato e cresciuto a Trantimou, Regione di Kayes, Mali, e di aver lavorato come cuoco. Ricorda di avere due fratelli, uno più grande e uno più piccolo, e di non essere sposato né avere figli. Ricorda di aver frequentato la scuola fino all'età di 8 anni. Ricorda di aver vissuto in Gabon per un anno e tre mesi, lavorando come muratore, e di aver litigato con suo fratello per motivi economici. 
-```xml
-<result>
-  <explanation>A non trova riscontro in RT, è stata inventata. </explanation>
-  <verdict>Hallucination</verdict>
 </result>
 ```
 
