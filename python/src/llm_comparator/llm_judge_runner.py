@@ -19,6 +19,7 @@ import math
 import re
 from multiprocessing.connection import answer_challenge
 from typing import Optional
+from tqdm import tqdm
 
 from llm_comparator import _logging
 from llm_comparator import model_helper
@@ -133,7 +134,7 @@ class LLMJudgeRunner:
     deterministic_judge_outputs = []
     judge_outputs = []
     # I want to filter out easy deterministic cases
-    for input in inputs:
+    for input in tqdm(inputs):
         if input['response_a'] in ["domanda_saltata", "N/A"]:
             judge_outputs.append(self.deterministic_outputs(input))
         else:

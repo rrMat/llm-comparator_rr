@@ -75,6 +75,8 @@ def run(
           {"name": "Model Name", "type": "category"},
           {"name": "Text Reference", "type" : "text"},
           {"name": "Disagreement Reason", "type": "text"},
+          {"name" : "Annotator Evaluation", "type" : "text"},
+          {"name" : "Annotator Rationale", "type" : "text"}
       ]},
       'models': [{'name': name} for name in model_names],
       'examples': [
@@ -91,7 +93,9 @@ def run(
                   "Doc Type" : input["custom_fields"]["doc_type"],
                   "Model Name" : input["custom_fields"]["model_name"],
                   "Text Reference" : input["custom_fields"]["text_reference"],
-                  "Disagreement Reason" : input["custom_filed"]["disagreement_reason"]
+                  "Disagreement Reason" : input["custom_fields"]["disagreement_reason"],
+                  "Annotator Evaluation" : input["custom_fields"]["a_evaluation"],
+                  "Annotator Rationale" : input["custom_fields"]["a_rationale"],
               },
           }
           for input, judgement in per_example_generator
