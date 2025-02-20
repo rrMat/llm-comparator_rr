@@ -23,14 +23,14 @@ import tqdm.auto
 from llm_comparator import _logging
 from llm_comparator import model_helper
 from llm_comparator import prompt_templates
-from llm_comparator import types
+from llm_comparator import my_types
 from llm_comparator import utils
 
 
 _RationaleBulletWithClusterSimilarity = (
-    types.RationaleBulletWithClusterSimilarity
+    my_types.RationaleBulletWithClusterSimilarity
 )
-_RationaleCluster = types.RationaleCluster
+_RationaleCluster = my_types.RationaleCluster
 _GenerationModelHelper = model_helper.GenerationModelHelper
 _EmbeddingModelHelper = model_helper.EmbeddingModelHelper
 _logger = _logging.logger

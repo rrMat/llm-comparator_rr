@@ -21,19 +21,17 @@ import pathlib
 from typing import Optional
 
 from llm_comparator import llm_judge_runner
-from llm_comparator import rationale_bullet_generator
-from llm_comparator import rationale_cluster_generator
-from llm_comparator import types
+from llm_comparator import my_types
 
 
 # TODO(llm-comparator): Provide convenience utilities for converting from, e.g.,
 # CSV/TSV to the dictionary format required by this function.
 def run(
-    inputs: Sequence[types.LLMJudgeInput],
+    inputs: Sequence[my_types.LLMJudgeInput],
     judge: llm_judge_runner.LLMJudgeRunner,
     model_names: Sequence[str] = ('A', 'B'),
-    judge_opts: Optional[types.JsonDict] = None,
-) -> types.JsonDict:
+    judge_opts: Optional[my_types.JsonDict] = None,
+) -> my_types.JsonDict:
   """Runs a comparison with LLM Comparator.
 
   LLM Comparator comparisons are run in three steps:
@@ -102,7 +100,7 @@ def run(
   }
 
 
-def write(comparison_result: types.JsonDict, file_path: str) -> str:
+def write(comparison_result: my_types.JsonDict, file_path: str) -> str:
   with open(file_path, 'w') as f:
     json.dump(comparison_result, f)
   return file_path

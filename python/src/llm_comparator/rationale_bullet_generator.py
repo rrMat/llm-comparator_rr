@@ -22,11 +22,11 @@ import tqdm.auto
 from llm_comparator import _logging
 from llm_comparator import model_helper
 from llm_comparator import prompt_templates
-from llm_comparator import types
+from llm_comparator import my_types
 from llm_comparator import utils
 
 
-_LLMJudgeOutput = types.LLMJudgeOutput
+_LLMJudgeOutput = my_types.LLMJudgeOutput
 _GenerationModelHelper = model_helper.GenerationModelHelper
 
 _logger = _logging.logger

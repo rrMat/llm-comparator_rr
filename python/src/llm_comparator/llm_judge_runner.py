@@ -17,19 +17,20 @@
 from collections.abc import Sequence
 import math
 import re
+from multiprocessing.connection import answer_challenge
 from typing import Optional
 
 from llm_comparator import _logging
 from llm_comparator import model_helper
 from llm_comparator import prompt_templates
-from llm_comparator import types
+from llm_comparator import my_types
 from llm_comparator import utils
 
 
-_IndividualRating = types.IndividualRating
-_JsonDict = types.JsonDict
-_LLMJudgeInput = types.LLMJudgeInput
-_LLMJudgeOutput = types.LLMJudgeOutput
+_IndividualRating = my_types.IndividualRating
+_JsonDict = my_types.JsonDict
+_LLMJudgeInput = my_types.LLMJudgeInput
+_LLMJudgeOutput = my_types.LLMJudgeOutput
 _GenerationModelHelper = model_helper.GenerationModelHelper
 
 _logger = _logging.logger
@@ -100,21 +101,47 @@ class LLMJudgeRunner:
             'prompt': ex['prompt'],
             'response_a': ex['response_a'],
             'response_b': ex['response_b'],
-            "text_reference" : ex["custom_fields"]["text_reference"]
+            "text_reference" : ex["custom_fields"]["text_reference"],
             'is_flipped': False,
         })
     _logger.info('Created %d inputs for LLM judge.', len(inputs_with_repeats))
     return inputs_with_repeats
 
+
+  def deterministic_outputs(self, input):
+    xml_structure = """
+    '```xml
+    <result>
+    <explanation>{explanation}</explanation>
+    <verdict>{verdict}</verdict>
+    </result>
+    ```'
+    """
+
+    if input["response_a"] == "N/A" and input["response_b"] == "N/A":
+        output = xml_structure.format(explanation= "A e GTA sono entrambe N/A.",verdict = "True Negative")
+    if input["response_a"] == "N/A" and input["response_b"] != "N/A":
+        output = xml_structure.format(explanation="A è N/A mentre GTA fornisce una risposta.", verdict="Missing Answer")
+    if input["response_a"] == "domanda_saltata":
+        output = xml_structure.format(explanation="A è 'domanda saltata', il modello ha saltato la domanda.", verdict="Skipped Question")
+
+    return output
+
   def run_query(self, inputs: Sequence[_JsonDict]) -> Sequence[str]:
     """Runs LLM judge."""
-    judge_inputs = [
-        self.create_prompt_for_judge(
-            input['prompt'], input['response_a'], input['response_b'], input['text_reference']
-        )
-        for input in inputs
-    ]
-    judge_outputs = self.generation_model_helper.predict_batch(judge_inputs)
+    judge_inputs = []
+    deterministic_judge_outputs = []
+    judge_outputs = []
+    # I want to filter out easy deterministic cases
+    for input in inputs:
+        if input['response_a'] in ["domanda_saltata", "N/A"]:
+            judge_outputs.append(self.deterministic_outputs(input))
+        else:
+            judge_input = self.create_prompt_for_judge(
+                input['prompt'], input['response_a'], input['response_b'], input['text_reference'])
+            out = self.generation_model_helper.predict(judge_input)
+            judge_outputs.append(out)
+
     _logger.info('Generated %d outputs from LLM judge.', len(judge_outputs))
     return judge_outputs
 
@@ -161,9 +188,7 @@ class LLMJudgeRunner:
         example_ratings[judge_input['example_index']].append({
             'is_flipped': judge_input['is_flipped'],
             'score': (
-                parsed_output[0] * -1.0
-                if judge_input['is_flipped']
-                else parsed_output[0]
+                parsed_output[0] * -1.0 if judge_input['is_flipped'] else parsed_output[0]
             ),
             'rating_label': parsed_output[1],
             'rationale': parsed_output[2],
@@ -187,6 +212,7 @@ class LLMJudgeRunner:
       self, inputs: Sequence[_LLMJudgeInput], num_repeats=6
   ) -> Sequence[_LLMJudgeOutput]:
     """Runs the LLM judge pipeline."""
+    self.num_repeats = num_repeats
     input_list_for_judge = self.create_inputs_with_repeats_for_judge(
         inputs, num_repeats
     )
