@@ -68,6 +68,11 @@ def run(
 
   per_example_generator = zip(inputs, judgements) #, cluster_similarities
 
+  ratings_labels = [jug["rating_labels"] for jug in judgements]
+
+  per_example_rating_labels = zip(inputs, ratings_labels)
+
+
   return {
       'metadata': {'custom_fields_schema': [
           {"name": "Case Number", "type": "category"},
@@ -94,14 +99,14 @@ def run(
                   "Model Name" : input["custom_fields"]["model_name"],
                   "Text Reference" : input["custom_fields"]["text_reference"],
                   "Disagreement Reason" : input["custom_fields"]["disagreement_reason"],
-                  "Annotator Evaluation" : input["custom_fields"]["a_evaluation"],
-                  "Annotator Rationale" : input["custom_fields"]["a_rationale"],
+                  # "Annotator Evaluation" : input["custom_fields"]["a_evaluation"],
+                  # "Annotator Rationale" : input["custom_fields"]["a_rationale"],
               },
           }
           for input, judgement in per_example_generator
       ],
       'rationale_clusters': [],
-  }
+  }, per_example_rating_labels
 
 
 def write(comparison_result: my_types.JsonDict, file_path: str) -> str:

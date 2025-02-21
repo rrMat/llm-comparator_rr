@@ -206,6 +206,7 @@ class LLMJudgeRunner:
       results.append({
           'score': score,
           'individual_rater_scores': list(ratings),
+          'rating_labels' : [rating['rating_label'] for rating in ratings]
       })
     return results
 
