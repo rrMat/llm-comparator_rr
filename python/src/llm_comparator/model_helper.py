@@ -27,9 +27,9 @@ from sentence_transformers import SentenceTransformer
 
 from together import Together
 
-# from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
-# import bitsandbytes as bnb
-# import torch
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
+import bitsandbytes as bnb
+import torch
 
 MAX_NUM_RETRIES = 5
 DEFAULT_MAX_OUTPUT_TOKENS = 256

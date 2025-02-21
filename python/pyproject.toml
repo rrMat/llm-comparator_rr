@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-comparator"
-version = "0.0.1"
+version = "2.0.0"
 authors = [
   { name="Google, LLC" }
 ]
@@ -16,7 +16,6 @@ dependencies = [
   "absl-py",
   "numpy",
   "tqdm",
-  "vertexai",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
