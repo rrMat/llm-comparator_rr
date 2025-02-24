@@ -75,11 +75,11 @@ class LLMJudgeRunner:
     self.rating_to_score_map = rating_to_score_map
 
   def create_prompt_for_judge(
-      self, prompt: str, response_a: str, response_b: str, text_reference: str
+      self, prompt: str, response_a: str, response_b: str, full_text: str
   ) -> str:
     if re.search('N\/A\b', response_b):
         prompt_for_judge = self.llm_judge_prompt_template[0].format(
-            prompt=prompt, response_a=response_a, response_b=response_b, text_reference=text_reference
+            prompt=prompt, response_a=response_a, response_b=response_b, full_text=full_text
         )
     else:
         prompt_for_judge = self.llm_judge_prompt_template[1].format(
@@ -102,7 +102,7 @@ class LLMJudgeRunner:
             'prompt': ex['prompt'],
             'response_a': ex['response_a'],
             'response_b': ex['response_b'],
-            "text_reference" : ex["custom_fields"]["text_reference"],
+            "full_text" : ex["custom_fields"]["full_text"],
             'is_flipped': False,
         })
     _logger.info('Created %d inputs for LLM judge.', len(inputs_with_repeats))
@@ -139,7 +139,7 @@ class LLMJudgeRunner:
             judge_outputs.append(self.deterministic_outputs(input))
         else:
             judge_input = self.create_prompt_for_judge(
-                input['prompt'], input['response_a'], input['response_b'], input['text_reference'])
+                input['prompt'], input['response_a'], input['response_b'], input['full_text'])
             out = self.generation_model_helper.predict(judge_input)
             judge_outputs.append(out)
 

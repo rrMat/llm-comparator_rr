@@ -280,7 +280,7 @@ Valuta la seguente Q, A, RT e GTA secondo le regole sopra indicate. Fornisci il 
 
 Q: {prompt}
 A: {response_a}
-RT: {text_reference}
+RT: {full_text}
 GTA: {response_b}
 
 
