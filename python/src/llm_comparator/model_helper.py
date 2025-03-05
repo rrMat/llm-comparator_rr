@@ -22,13 +22,13 @@ from tqdm import tqdm
 
 from llm_comparator import _logging
 
-from sentence_transformers import SentenceTransformer
+# from sentence_transformers import SentenceTransformer
 
 
 from together import Together
 
-from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
-import bitsandbytes as bnb
+# from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
+# import bitsandbytes as bnb
 import torch
 
 MAX_NUM_RETRIES = 5
@@ -108,150 +108,150 @@ class TogetherGeneration(GenerationModelHelper):
             results.append(output)
             tqdm.write(f"results: {results}")
         return results
-
-class HuggingFaceGenerationModelHelper(GenerationModelHelper):
-    """HuggingFace text generation model helper."""
-
-    def __init__(self, model_name: str = 'EleutherAI/gpt-neo-2.7B', use_8bit: bool = False, use_4bit: bool = False):
-        # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.device = torch.device("mps" if torch.backends.mps.is_available() else
-                                   "cuda" if torch.cuda.is_available() else "cpu")
-
-        if use_4bit or use_8bit:
-            quantization_config = BitsAndBytesConfig(
-                load_in_4bit=use_4bit,
-                load_in_8bit=use_8bit,
-            )
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                quantization_config=quantization_config,
-                device_map='auto'
-            ).to(self.device)
-        else:
-            if self.device.type == 'mps':
-                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                ).to(self.device)
-            else:
-                self.generator = pipeline('text-generation', model=model_name)
-                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-    def predict(
-        self,
-        prompt: str,
-        max_new_tokens: int = 200,
-        temperature: float = 0.3,
-        top_p = 0.7,
-        top_k = 15,
-    ) -> str:
-
-        if not prompt:
-            print("No messages provided.")
-            return ""
-
-        messages = {"role": "system", "content": prompt},
-        # Format the chat messages into a single string
-        formatted_chat = self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True
-        )
-        model_inputs = self.tokenizer([formatted_chat], return_tensors="pt").to(self.model.device)
-
-        try:
-            generated_ids = self.model.generate(
-                **model_inputs,
-                max_new_tokens=max_new_tokens,
-                temperature=temperature,
-                top_p=top_p,
-                top_k=top_k,
-                num_return_sequences=1
-            )
-
-            generated_ids = [
-                    output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
-            ]
-
-            response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-            # Strip the prompt tokens
-            print(f"response: {response}")
-            return response
-        except Exception as e:
-            _logger.error(f"Error during LLM chat generation: {e}")
-            return ""
-
-    def predict_batch(
-        self,
-        batch_of_messages: Sequence[str],
-        max_new_tokens: int = 200,
-        temperature: float = 0.3,
-        top_p = 0.7,
-        top_k = 15,
-    ) -> Sequence[str]:
-        """
-        Runs predict_chat on a batch of conversations.
-        Each item in 'batch_of_messages' is a list of dicts representing a conversation.
-        """
-        results = []
-        for prompt in tqdm(batch_of_messages):
-            output = self.predict(
-                prompt,
-                max_new_tokens=max_new_tokens,
-                temperature=temperature,
-                top_p=top_p,
-                top_k=top_k,
-            )
-            results.append(output)
-            tqdm.write(f"results: {results}")
-        return results
-
-
-class HuggingFaceEmbeddingModelHelper(EmbeddingModelHelper):
-    """HuggingFace embedding model helper."""
-
-    def __init__(self, model_name: str = 'sentence-transformers/all-MiniLM-L6-v2', use_8bit: bool = False, use_4bit: bool = False):
-        if use_4bit:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModel.from_pretrained(model_name, load_in_4bit=True, device_map='auto')
-        elif use_8bit:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModel.from_pretrained(model_name, load_in_8bit=True, device_map='auto')
-        else:
-            self.model = SentenceTransformer(model_name)
-
-    def embed(self, text: str) -> Sequence[float]:
-        if not text:
-            return []
-        try:
-            if hasattr(self, 'tokenizer'):
-                inputs = self.tokenizer(text, return_tensors='pt').to(self.model.device)
-                outputs = self.model(**inputs)
-                embedding = outputs.last_hidden_state.mean(dim=1).squeeze().tolist()
-            else:
-                embedding = self.model.encode(text)
-            print(f"embedding: {embedding}")
-            return embedding
-        except Exception as e:
-            _logger.error(f'Error during HuggingFace embedding: {e}')
-            return []
-
-    def embed_batch(self, texts: Sequence[str]) -> Sequence[Sequence[float]]:
-        if not texts:
-            return []
-        try:
-            if hasattr(self, 'tokenizer'):
-                inputs = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True).to(self.model.device)
-                outputs = self.model(**inputs)
-                embeddings = outputs.last_hidden_state.mean(dim=1).tolist()
-            else:
-                embeddings = self.model.encode(texts)
-            print(f"embeddings: {embeddings}")
-            return embeddings
-        except Exception as e:
-            _logger.error(f'Error during HuggingFace embedding batch: {e}')
-            return []
-
-
+#
+# class HuggingFaceGenerationModelHelper(GenerationModelHelper):
+#     """HuggingFace text generation model helper."""
+#
+#     def __init__(self, model_name: str = 'EleutherAI/gpt-neo-2.7B', use_8bit: bool = False, use_4bit: bool = False):
+#         # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#         self.device = torch.device("mps" if torch.backends.mps.is_available() else
+#                                    "cuda" if torch.cuda.is_available() else "cpu")
+#
+#         if use_4bit or use_8bit:
+#             quantization_config = BitsAndBytesConfig(
+#                 load_in_4bit=use_4bit,
+#                 load_in_8bit=use_8bit,
+#             )
+#             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+#             self.model = AutoModelForCausalLM.from_pretrained(
+#                 model_name,
+#                 quantization_config=quantization_config,
+#                 device_map='auto'
+#             ).to(self.device)
+#         else:
+#             if self.device.type == 'mps':
+#                 self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+#                 self.model = AutoModelForCausalLM.from_pretrained(
+#                     model_name,
+#                 ).to(self.device)
+#             else:
+#                 self.generator = pipeline('text-generation', model=model_name)
+#                 self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+#
+#     def predict(
+#         self,
+#         prompt: str,
+#         max_new_tokens: int = 200,
+#         temperature: float = 0.3,
+#         top_p = 0.7,
+#         top_k = 15,
+#     ) -> str:
+#
+#         if not prompt:
+#             print("No messages provided.")
+#             return ""
+#
+#         messages = {"role": "system", "content": prompt},
+#         # Format the chat messages into a single string
+#         formatted_chat = self.tokenizer.apply_chat_template(
+#             messages,
+#             tokenize=False,
+#             add_generation_prompt=True
+#         )
+#         model_inputs = self.tokenizer([formatted_chat], return_tensors="pt").to(self.model.device)
+#
+#         try:
+#             generated_ids = self.model.generate(
+#                 **model_inputs,
+#                 max_new_tokens=max_new_tokens,
+#                 temperature=temperature,
+#                 top_p=top_p,
+#                 top_k=top_k,
+#                 num_return_sequences=1
+#             )
+#
+#             generated_ids = [
+#                     output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+#             ]
+#
+#             response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+#             # Strip the prompt tokens
+#             print(f"response: {response}")
+#             return response
+#         except Exception as e:
+#             _logger.error(f"Error during LLM chat generation: {e}")
+#             return ""
+#
+#     def predict_batch(
+#         self,
+#         batch_of_messages: Sequence[str],
+#         max_new_tokens: int = 200,
+#         temperature: float = 0.3,
+#         top_p = 0.7,
+#         top_k = 15,
+#     ) -> Sequence[str]:
+#         """
+#         Runs predict_chat on a batch of conversations.
+#         Each item in 'batch_of_messages' is a list of dicts representing a conversation.
+#         """
+#         results = []
+#         for prompt in tqdm(batch_of_messages):
+#             output = self.predict(
+#                 prompt,
+#                 max_new_tokens=max_new_tokens,
+#                 temperature=temperature,
+#                 top_p=top_p,
+#                 top_k=top_k,
+#             )
+#             results.append(output)
+#             tqdm.write(f"results: {results}")
+#         return results
+#
+#
+# class HuggingFaceEmbeddingModelHelper(EmbeddingModelHelper):
+#     """HuggingFace embedding model helper."""
+#
+#     def __init__(self, model_name: str = 'sentence-transformers/all-MiniLM-L6-v2', use_8bit: bool = False, use_4bit: bool = False):
+#         if use_4bit:
+#             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+#             self.model = AutoModel.from_pretrained(model_name, load_in_4bit=True, device_map='auto')
+#         elif use_8bit:
+#             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+#             self.model = AutoModel.from_pretrained(model_name, load_in_8bit=True, device_map='auto')
+#         else:
+#             self.model = SentenceTransformer(model_name)
+#
+#     def embed(self, text: str) -> Sequence[float]:
+#         if not text:
+#             return []
+#         try:
+#             if hasattr(self, 'tokenizer'):
+#                 inputs = self.tokenizer(text, return_tensors='pt').to(self.model.device)
+#                 outputs = self.model(**inputs)
+#                 embedding = outputs.last_hidden_state.mean(dim=1).squeeze().tolist()
+#             else:
+#                 embedding = self.model.encode(text)
+#             print(f"embedding: {embedding}")
+#             return embedding
+#         except Exception as e:
+#             _logger.error(f'Error during HuggingFace embedding: {e}')
+#             return []
+#
+#     def embed_batch(self, texts: Sequence[str]) -> Sequence[Sequence[float]]:
+#         if not texts:
+#             return []
+#         try:
+#             if hasattr(self, 'tokenizer'):
+#                 inputs = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True).to(self.model.device)
+#                 outputs = self.model(**inputs)
+#                 embeddings = outputs.last_hidden_state.mean(dim=1).tolist()
+#             else:
+#                 embeddings = self.model.encode(texts)
+#             print(f"embeddings: {embeddings}")
+#             return embeddings
+#         except Exception as e:
+#             _logger.error(f'Error during HuggingFace embedding batch: {e}')
+#             return []
+#
+#
 

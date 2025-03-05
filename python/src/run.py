@@ -13,7 +13,7 @@ def llm_judge_evaluation(llm_judge_inputs):
 
     comparison_results = None
 
-    generator =  TogetherGeneration(temperature=0, max_new_tokens=200)
+    generator =  TogetherGeneration(temperature=0, max_new_tokens=2000)
     judge = llm_judge_runner.LLMJudgeRunner(generator)
     comparison_result, llm_evaluations_zip = comparison.run(
         llm_judge_inputs,
@@ -59,7 +59,7 @@ def llm_judge_evaluation(llm_judge_inputs):
             #     comparison_results["examples"].extend(examples)
     return comparison_results
 
-path = r"C:\Users\matte\PycharmProjects\llm-comparator_rr\python\notebooks\llm_comparator_judge_preprocessing.pkl"
+path = r"C:\Users\matte\PycharmProjects\llm-comparator_rr\python\notebooks\llm_judge_comparator_preprocessing.pkl"
 with open(path, 'rb') as file:
     data = pickle.load(file)
-result = llm_judge_evaluation(llm_judge_inputs = data["Caso_127"]["audizione"][:5])
+result = llm_judge_evaluation(llm_judge_inputs = data["Caso_87"]["audizione"])
