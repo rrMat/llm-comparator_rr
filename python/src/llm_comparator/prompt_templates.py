@@ -142,11 +142,40 @@ Valuta la seguente Q, A, R secondo le regole sopra indicate. Fornisci il tuo out
 
 
 DEFAULT_LLM_JUDGE_PROMPT_TEMPLATE = """
-
 ### **Prompt del Giudice LLM con Attività di Tagging**
++9
+**Input**
+RT: {full_text}
+Q: {prompt}
+A: {response_a}
+GTA: {response_b}
+
 
 **Compito:**
-Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q) e una risposta di riferimento (GTA).
+Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q), una risposta di riferimento (GTA) e il testo (RT) usato per formulare la risposta.
+
+
+**Procedura di valutazione**
+- Passo 1. Analizzare la Domanda Q:
+- - valutare quali informazioni specifiche vengono richieste.
+
+- Passo 2. Esaminare la Risposta:
+- - valuta se A fornisce una risposta alla domanda Q
+- - Verificare se $ A $ introduce nuove informazioni non presenti nel testo di riferimento $RT$.
+
+-Passo 3. Verificare il Testo di Riferimento ($ RT $):
+- - Identificare se $ RT $ contiene informazioni esplicite o implicite che supportano $ A $.
+- - Determinare se il collegamento tra $ RT $ e $ A $ è logico e pertinente rispetto a $ Q $.
+- - Prestare particolare attenzione ai casi in cui $ A $ viene inferita da $ RT $ ma non affronta direttamente $ Q $. 
+
+- Passo 4: Valutare la Pertinenza alla Domanda ($ Q $):
+- - Verificare se $ A $ affronta l'intento principale di $ Q $. Questo comporta:
+- - - Assicurarsi che $ A $ non introduca assunzioni al di là di quanto dichiarato in $ RT $.
+- - - - Confermare che $ A $ non confonda concetti correlati ma distinti.
+- - - -  - Controllare se $ A $ è coerente con il contesto di $ Q $.
+-- Verificare se $ RT $ affronta l'intento principale di $ Q $. 
+
+- Passo 5: Applicare le Regole di Valutazione
 
 **Regole di Valutazione:**
 1. **A e GTA corrispondono perfettamente nel significato (possono essere formulate diversamente):**
@@ -164,8 +193,34 @@ Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q) 
 4. **A aggiunge informazioni rispetto a GTA:**
    Verdetto: `Inference`
    Spiegazione: Spiega quali informazioni aggiunge A rispetto a GTA.
+   
+5. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è inventata:**  
+   Verdetto: `Hallucination`  
+   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che non ha riscontro in RT.  
+
+6. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT ma NON è pertinente alla domanda Q:**  
+   Verdetto: `Hallucination`  
+   Spiegazione: Indica che A è stata dedotta da RT, ma non risponde direttamente alla domanda Q. Anche se l'informazione è presente in RT, se non è rilevante per la domanda, viene considerata come una distorsione del contesto e quindi classificata come Hallucination.  
+
+7. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT ed è pertinente alla domanda Q:**  
+   Verdetto: `Inference`  
+   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che è stata inferta da RT e risponde direttamente alla domanda Q.  
+   
+8. **A non è rilevante rispetto alla domanda Q**
+    Verdetto: `Hallucination` 
+    Spiegazione: A non risponde a Q, indipendentemente da RT la risposta A è frutto di Hallucination. 
 
 
+**Linea Guida per Differenziare Inference e Hallucination:**
+- **Pertinenza alla Domanda:** 
+  - Se l'informazione in A è dedotta da RT ma non risponde alla domanda Q, è **Hallucination**.
+  - Se l'informazione in A è dedotta da RT e risponde direttamente alla domanda Q, è **Inference**.
+
+- **Traccia nel Testo di Riferimento (RT):**
+  - Se A introduce dettagli che non hanno alcuna traccia in RT, è **Hallucination**.
+  - Se RT contiene indizi, anche indiretti, che permettono di inferire ragionevolmente la risposta, è **Inference**.
+  
+  
 **Formato di Output:**
 Presenta la tua valutazione nel seguente formato XML:
 ```xml
@@ -177,7 +232,7 @@ Presenta la tua valutazione nel seguente formato XML:
 
 **Opzioni di Verdetto:**
 Il verdetto deve essere uno dei seguenti:
-['Correct', 'Wrong', 'Incomplete', 'Inference']
+['Correct', 'Wrong', 'Incomplete', 'Inference', 'Hallucination']
 
 ---
 
@@ -231,89 +286,7 @@ GTA: Sudan, Libia.
 </result>
 ```
 
----
-
-**Il Tuo Compito:**
-Valuta la seguente Q, A e GTA secondo le regole sopra indicate. Fornisci il tuo output nel formato XML specificato.
-
-Q: {prompt}
-A: {response_a}
-GTA: {response_b}
-
-"""
-
-DEFAULT_LLM_JUDGE_WITH_REFERENCE_PROMPT_TEMPLATE = """
-### **Prompt del Giudice LLM con Attività di Tagging**
-
-**Compito:**
-Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q), una risposta di riferimento (GTA) e il testo (RT) usato per formulare la risposta.
-
-**Procedura di valutazione**
-- Passo 1. Analizzare la Domanda Q:
-- - valutare quali informazioni specifiche vengono richieste.
-
-- Passo 2. Esaminare la Risposta:
-- - valuta se A fornisce una risposta alla domanda Q
-- - Verificare se $ A $ introduce nuove informazioni non presenti nel testo di riferimento $ RT $.
-
--Passo 3. Verificare il Testo di Riferimento ($ RT $):
-- - Identificare se $ RT $ contiene informazioni esplicite o implicite che supportano $ A $.
-- - Determinare se il collegamento tra $ RT $ e $ A $ è logico e pertinente rispetto a $ Q $.
-- - Prestare particolare attenzione ai casi in cui $ A $ viene inferita da $ RT $ ma non affronta direttamente $ Q $. 
-
-- Passo 4: Valutare la Pertinenza alla Domanda ($ Q $):
-- - Verificare se $ A $ affronta l'intento principale di $ Q $. Questo comporta:
-- - - Assicurarsi che $ A $ non introduca assunzioni al di là di quanto dichiarato in $ RT $.
-- - - - Confermare che $ A $ non confonda concetti correlati ma distinti.
-- - - -  - Controllare se $ A $ è coerente con il contesto di $ Q $.
--- Verificare se $ RT $ affronta l'intento principale di $ Q $. 
-
-- Passo 5: Applicare le Regole di Valutazione
-
-**Regole di Valutazione:**
-1. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è inventata:**  
-   Verdetto: `Hallucination`  
-   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che non ha riscontro in RT.  
-
-2. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT ma NON è pertinente alla domanda Q:**  
-   Verdetto: `Hallucination`  
-   Spiegazione: Indica che A è stata dedotta da RT, ma non risponde direttamente alla domanda Q. Anche se l'informazione è presente in RT, se non è rilevante per la domanda, viene considerata come una distorsione del contesto e quindi classificata come Hallucination.  
-
-3. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT ed è pertinente alla domanda Q:**  
-   Verdetto: `Inference`  
-   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che è stata inferta da RT e risponde direttamente alla domanda Q.  
-   
-4. **A non è rilevante rispetto alla domanda Q**
-    Verdetto: `Hallucination` 
-    Spiegazione: A non risponde a Q, indipendentemente da RT la risposta A è frutto di Hallucination. 
-
-**Linea Guida per Differenziare Inference e Hallucination:**
-- **Pertinenza alla Domanda:** 
-  - Se l'informazione in A è dedotta da RT ma non risponde alla domanda Q, è **Hallucination**.
-  - Se l'informazione in A è dedotta da RT e risponde direttamente alla domanda Q, è **Inference**.
-
-- **Traccia nel Testo di Riferimento (RT):**
-  - Se A introduce dettagli che non hanno alcuna traccia in RT, è **Hallucination**.
-  - Se RT contiene indizi, anche indiretti, che permettono di inferire ragionevolmente la risposta, è **Inference**.
-
-
-**Formato di Output:**
-Presenta la tua valutazione nel seguente formato XML:
-```xml
-<result>
-  <explanation>LA TUA SPIEGAZIONE QUI.</explanation>
-  <verdict>UNO DEI VERDETTI QUI.</verdict>
-</result>
-```
-
-**Opzioni di Verdetto:**
-Il verdetto deve essere uno dei seguenti:
-['Hallucination', 'Inference']
-
----
-**Esempi:**
-
-**Esempio 1:**
+**Esempio 5:**
 Q: Che lavoro svolgono o svolgevano i familiari del richiedente?
 A: I genitori facevano i pastori, mentre il fratello il fabbro.
 GTA: N/A
@@ -331,7 +304,7 @@ Analisi:
 </result>
 ```
 
-**Esempio 2:**
+**Esempio 6:**
 Q: Dove dimora il richiedente? 
 A: Bamako
 GTA: N/A
@@ -349,7 +322,7 @@ Analisi:
 </result>
 ```
 
-**Esempio 3:**
+**Esempio 7:**
 Q: Qual è il nome del fratello maggiore del richiedente?
 A: Lori Doli
 GTA: N/A
@@ -367,7 +340,7 @@ Analisi:
 </result>
 ```
 
-**Esempio 4:**
+**Esempio 8:**
 Q: Perché la commissione ritiene attendibili le circostanze relative al fatto che il commerciante aveva fatto arrestare il richiedente?
 A: Il richiedente non ha rivolto alcuna denuncia o richiesta di protezione a nessuna autorità civile o religiosa del suo Paese per contrastare le minacce dello zio.
 GTA: N/A
@@ -383,7 +356,7 @@ Analisi:
   <verdict>Hallucination</verdict>
 </result>
 
-**Esempio 5:**
+**Esempio 9:**
 Q: Il richiedente si sente a suo agio con l'interprete? (SI, NO, N/A)
 A: SI
 RT: Comprende bene l'interprete? Si, parliamo pula.
@@ -401,17 +374,5 @@ Analisi:
 </result>
 
 ---
-
-**Il Tuo Compito:**
-Valuta la seguente Q, A, RT e GTA secondo le regole sopra indicate. Fornisci il tuo output nel formato XML specificato.
-
-Q: {prompt}
-A: {response_a}
-RT: {full_text}
-GTA: {response_b}
-
-
-**Nota finale**
-Ricorda di non fare te stesso inferenze o implicazioni, devi essere il più obbiettivo possibile.
 """
 
