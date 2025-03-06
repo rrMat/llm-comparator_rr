@@ -141,9 +141,9 @@ Valuta la seguente Q, A, R secondo le regole sopra indicate. Fornisci il tuo out
 
 
 
-DEFAULT_LLM_JUDGE_PROMPT_TEMPLATE = """
+RECURSIVE_JUDGE = """
 ### **Prompt del Giudice LLM con Attività di Tagging**
-+9
+
 **Input**
 RT: {full_text}
 Q: {prompt}
@@ -153,86 +153,77 @@ GTA: {response_b}
 
 **Compito:**
 Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q), una risposta di riferimento (GTA) e il testo (RT) usato per formulare la risposta.
+Ad ogni riposta possono corrispondere più verdetti.
 
 
 **Procedura di valutazione**
+
 - Passo 1. Analizzare la Domanda Q:
-- - valutare quali informazioni specifiche vengono richieste.
+- - valutare quali informazioni specifiche vengono richieste dalle parti.  
 
-- Passo 2. Esaminare la Risposta:
-- - valuta se A fornisce una risposta alla domanda Q
-- - Verificare se $ A $ introduce nuove informazioni non presenti nel testo di riferimento $RT$.
+- Passo 2. Esaminare la Risposta A:
+- - se possibile scomponi la risposta A in parti A'
+- - valuta se le singole parti A' di A forniscono una risposta alla domanda Q
+- - Verifica se A o una parte A' corrisponde in significato alla risposta di riferimento GTA.
+- - Verifica se A tralascia informazioni contenute nella risposta di riferimento GTA. 
 
--Passo 3. Verificare il Testo di Riferimento ($ RT $):
-- - Identificare se $ RT $ contiene informazioni esplicite o implicite che supportano $ A $.
-- - Determinare se il collegamento tra $ RT $ e $ A $ è logico e pertinente rispetto a $ Q $.
-- - Prestare particolare attenzione ai casi in cui $ A $ viene inferita da $ RT $ ma non affronta direttamente $ Q $. 
+- Passo 3. Analizza il Testo di Riferimento RT:
+- - Verificare se A o una parte A' introduce nuove informazioni non presenti nel testo di riferimento RT.
+- - Identificare se RT contiene informazioni esplicite o implicite che supportano A'.
+- - - Se implicite, determinare se le premesse contenute in RT sono valide e implicano A'.
 
-- Passo 4: Valutare la Pertinenza alla Domanda ($ Q $):
-- - Verificare se $ A $ affronta l'intento principale di $ Q $. Questo comporta:
-- - - Assicurarsi che $ A $ non introduca assunzioni al di là di quanto dichiarato in $ RT $.
-- - - - Confermare che $ A $ non confonda concetti correlati ma distinti.
-- - - -  - Controllare se $ A $ è coerente con il contesto di $ Q $.
--- Verificare se $ RT $ affronta l'intento principale di $ Q $. 
+- Passo 4: Applicare le Regole di Valutazione e eventualmente assegna un verdetto.
 
-- Passo 5: Applicare le Regole di Valutazione
 
 **Regole di Valutazione:**
-1. **A e GTA corrispondono perfettamente nel significato (possono essere formulate diversamente):**
-   Verdetto: `Correct`
-   Spiegazione: Spiega perché A e GTA corrispondono nel significato.
+Con A' si intende una parte di A, una domanda A può avere più valutazioni. 
 
-2. **A e GTA sono diversi:**
+1. **A' e GTA corrispondono perfettamente nel significato (possono essere formulate diversamente):**
+   Verdetto: `Correct`
+   Spiegazione: Spiega perché A' e GTA corrispondono nel significato.
+
+2. **A' e GTA sono diversi:**
    Verdetto: `Wrong`
-   Spiegazione: Spiega perché A e GTA differiscono.
+   Spiegazione: Spiega perché A' e GTA differiscono.
 
 3. **A fornisce una risposta incompleta:**
    Verdetto: `Incomplete`
-   Spiegazione: Spiega perché A è incomplete.
-   
-4. **A aggiunge informazioni rispetto a GTA:**
+   Spiegazione: Spiega quali parti di della risposta di riferimento mancano per rendere A completa.  
+      
+4. **A' aggiunge informazioni rispetto a GTA che può essere inferta da RT:**
    Verdetto: `Inference`
-   Spiegazione: Spiega quali informazioni aggiunge A rispetto a GTA.
+   Spiegazione: Spiega quali informazioni aggiunge A' rispetto a GTA e da che parte di RT. Perché A' sia considerata 'Inference' l'inferenza deve essere valida. Ovvero le premesse devono implicare la conclusione. 
    
-5. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è inventata:**  
+5. **A' aggiunge informazioni non presenti nel teso di riferimento RT.**  
    Verdetto: `Hallucination`  
-   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che non ha riscontro in RT.  
-
-6. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT ma NON è pertinente alla domanda Q:**  
-   Verdetto: `Hallucination`  
-   Spiegazione: Indica che A è stata dedotta da RT, ma non risponde direttamente alla domanda Q. Anche se l'informazione è presente in RT, se non è rilevante per la domanda, viene considerata come una distorsione del contesto e quindi classificata come Hallucination.  
-
-7. **A contiene una risposta mentre GTA è N/A e, considerando RT, A è stata inferta da RT ed è pertinente alla domanda Q:**  
-   Verdetto: `Inference`  
-   Spiegazione: Indica che A fornisce una risposta (compresi "Sì" o "No"), che è stata inferta da RT e risponde direttamente alla domanda Q.  
-   
-8. **A non è rilevante rispetto alla domanda Q**
-    Verdetto: `Hallucination` 
-    Spiegazione: A non risponde a Q, indipendentemente da RT la risposta A è frutto di Hallucination. 
+   Spiegazione: Indica che A' fornisce una risposta che non ha riscontro in RT nè in modo esplicito, nè attraverso inferenza. A' differenza di un Inference l'informazione non può essere inferta dal testo.  
 
 
 **Linea Guida per Differenziare Inference e Hallucination:**
 - **Pertinenza alla Domanda:** 
-  - Se l'informazione in A è dedotta da RT ma non risponde alla domanda Q, è **Hallucination**.
-  - Se l'informazione in A è dedotta da RT e risponde direttamente alla domanda Q, è **Inference**.
-
-- **Traccia nel Testo di Riferimento (RT):**
-  - Se A introduce dettagli che non hanno alcuna traccia in RT, è **Hallucination**.
-  - Se RT contiene indizi, anche indiretti, che permettono di inferire ragionevolmente la risposta, è **Inference**.
+- - Se l'informazione in A' non è presente nel testo A' è **Hallucination**.
+- - Se l'informazione in A' è dedotta da RT e le premesse implicano la conclusione **Inference**.
   
-  
-**Formato di Output:**
-Presenta la tua valutazione nel seguente formato XML:
-```xml
-<result>
-  <explanation>LA TUA SPIEGAZIONE QUI.</explanation>
-  <verdict>UNO DEI VERDETTI QUI.</verdict>
-</result>
-```
+**Line Guida per differenziare fra inferenza valida e inferenza non valida**
+- Le premesse presenti in RT implicano A'? Per capirlo bisogna valutare se le premesse sono valide per inferire A'.
+- - Se le premesse sono valide A' è **Inference**.
+- - Se le premesse sono valide A' è **Wrong**.
 
 **Opzioni di Verdetto:**
 Il verdetto deve essere uno dei seguenti:
 ['Correct', 'Wrong', 'Incomplete', 'Inference', 'Hallucination']
+
+
+**Formato di Output:**
+Presenta la tua valutazione nel seguente formato XML:
+
+```xml
+<result>
+  <analisi>ANALISI A PASSI QUA</analisi>
+  <explanation>LA TUA SPIEGAZIONE PER OGNI VERDETTO QUI.</explanation>
+  <verdict>I VERDETTI SELEZIONATI QUI.</verdict>
+</result>
+```
 
 ---
 
@@ -241,138 +232,122 @@ Il verdetto deve essere uno dei seguenti:
 **Esempio 1:**
 Q: Che lavoro faceva il richiedente?
 A: Cuoco
-GTA: lavorava come cuoco
+GTA: cuoco
+RT: Mario lavora come cuoco da 5 anni presso la cooperativa sociale. Ha una moglie e due figli che vanno a scuola. 
 
 ```xml
 <result>
+  <analisi>
+        - Passo 1:
+        La domanda riguarda il lavoro svolto dal richiedente.
+        
+        - Passo 2:
+        La risposta è un lavoro ed è pertinente alla domanda. 
+        La risposta corrisponde a GTA. 
+        La risposta non tralascia informazioni presenti in GTA.
+        
+        - Passo 3:
+        Il testo contine in modo esplicito la risposta (lavora come cuoco). 
+        
+        - Passo 4: 
+        Applicando le regole risulta che la risposta A corrisponde a GTA, non tralascia informazioni ed è esplicitamente presente nel testo. Perciò è 'Correct'.  
+    </analisi>
   <explanation>A e GTA hanno lo stesso significato.</explanation>
   <verdict>Correct</verdict>
 </result>
 ```
 
 **Esempio 2:**
-Q: Qual è il nome della moglie del richiedente?
-A: Maria
-GTA: Anna
+Q: Che lingue parla il richiedente?
+A: Francese, Tedesco
+GTA: Francese
+RT: Il richiedente è di madrelingua francese passa spesso le vacanze in germania. 
+
 
 ```xml
 <result>
-  <explanation>A e GTA sono diversi.</explanation>
-  <verdict>Wrong</verdict>
+  <analisi>
+    - Passo 1:
+    La domanda riguarda le lingue parlate dal richiedente.
+    
+    - Passo 2:
+    La risposta si può scomporre in Francese ed Tedesco.
+    La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
+    La parte di risposta (Francese) corrisponde a GTA. 
+    La risposta non tralascia informazioni presenti in GTA.
+    
+    - Passo 3:
+    Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
+    La risposta (Tedesco) introduce un inferenza non valida, nel testo RT si menziona che il richiedente va in vacanza in germania. Questo premessa non è valida per inferire che il richiedente parli tedesco.
+    
+    - Passo 4: 
+    Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, mentre la parte di risposta Tedesco è un inferenza non valida. Perciò è 'Correct' e 'Wrong'.
+    </analisi>
+  <explanation> Francese è Correct, Tedesco è Wrong</explanation>
+  <verdict>Correct, Wrong</verdict>
 </result>
 ```
 
 **Esempio 3:**
-Q: Perché la commissione non ritiene credibile la dichiarazione?
-A: Per via delle contraddizioni.
-GTA: Perché il richiedente si contraddice più volte descrivendo la sua fuga, menzionando di essere andato in Grecia, ma al tempo stesso di aver preso un barcone in Libia. 
+Q: Che lingue parla il richiedente?
+A: Francese, Tedesco
+GTA: Francese, Italiano
+RT: Il richiedente è di madrelingua francese e vive in Germania. 
 
 ```xml
 <result>
-  <explanation>A risponde solo parzialmente alla domanda.</explanation>
-  <verdict>Incomplete</verdict>
+    <analisi>
+        - Passo 1:
+        La domanda riguarda le lingue parlate dal richiedente.
+        
+        - Passo 2:
+        La risposta si può scomporre in Francese ed Tedesco.
+        La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
+        La parte di risposta (Francese) corrisponde a GTA. 
+        La risposta tralascia informazioni (Italiano) presenti in GTA.
+        
+        - Passo 3:
+        Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
+        La risposta (Tedesco) introduce un inferenza valida, nel testo RT si menziona che il richiedente vive in germania. Questo premessa è valida per inferire che il richiedente parlai tedesco.
+        
+        - Passo 4: 
+        Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Tedesco è un inferenza valida. Mentre Italiano viene tralasciato. Perciò è 'Correct' e 'Inference' e 'Incomplete'.
+    </analisi>
+  <explanation> Francese è Correct, Tedesco è Inference, Italiano manca quindi Incomplete</explanation>
+  <verdict>Correct, Wrong, Incomplete</verdict>
 </result>
 ```
 
 **Esempio 4:**
-Q: Che paesi ha visitato il richiedente?
-A: Sudan, Libia, Algeria.
-GTA: Sudan, Libia.
+Q: Che lingue parla il richiedente?
+A: Francese, Spagnolo, Polizia
+GTA: Francese, Italiano
+RT: Il richiedente è di madrelingua francese e vive in Germania. 
+
 
 ```xml
 <result>
-  <explanation>A aggiunge informazioni rispetto a GTA.</explanation>
-  <verdict>Inference</verdict>
+    <analisi>
+        - Passo 1:
+        La domanda riguarda le lingue parlate dal richiedente.
+        
+        - Passo 2:
+        La risposta si può scomporre in Francese, Spagnolo e Polizia.
+        La due parti di risposta Francese e Spagnolo sono due linguee e pertanto pertinenti alla domanda, mentre polizia non è pertinente. 
+        La parte di risposta (Francese) corrisponde a GTA. 
+        La risposta tralascia informazioni (Italiano) presenti in GTA.
+        
+        - Passo 3:
+        Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
+        La risposta (Spagnolo) non è presente nel testo RT in maniera implicita o esplicita. Risulta quini inventata.
+        
+        - Passo 4: 
+        Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Spagnolo è un hallucination. Mentre Italiano viene tralasciato. Perciò è 'Correct' e 'Hallucination' e 'Incomplete'.
+    </analisi>
+  <explanation> Francese è Correct, Spagnolo è Hallucination, Italiano manca quindi Incomplete</explanation>
+  <verdict>Correct, Hallucination, Incomplete</verdict>
 </result>
 ```
-
-**Esempio 5:**
-Q: Che lavoro svolgono o svolgevano i familiari del richiedente?
-A: I genitori facevano i pastori, mentre il fratello il fabbro.
-GTA: N/A
-RT: Il richiedente ricorda di essere nato e cresciuto a Trantimou, Regione di Kayes, Mali, e di aver lavorato come cuoco. Ricorda di avere due fratelli, uno più grande e uno più piccolo, e di non essere sposato né avere figli. Ricorda di aver frequentato la scuola fino all'età di 8 anni. Ricorda di aver vissuto in Gabon per un anno e tre mesi, lavorando come muratore, e di aver litigato con suo fratello per motivi economici. 
-
-Analisi:
-- $ RT $ non contiene alcuna informazione sui lavori svolti dai familiari del richiedente.
-- $ A $ introduce dettagli specifici ("I genitori facevano i pastori, mentre il fratello il fabbro") che non hanno alcun riscontro in $ RT $.
-- Poiché $ A $ è inventata e non supportata da $ RT $, si tratta di **Hallucination**.
-
-```xml
-<result>
-  <explanation>A non trova riscontro in RT, è stata inventata. </explanation>
-  <verdict>Hallucination</verdict>
-</result>
-```
-
-**Esempio 6:**
-Q: Dove dimora il richiedente? 
-A: Bamako
-GTA: N/A
-RT: Poi un giorno sono uscito, avevo fatto delle fotocopie dei miei documenti (carta d'identità, passaporto scaduto). Mentre ero fuori, la polizia è andata a casa di Lori Doli per cercarmi. Se mi avessero visto mi avrebbero ucciso. Poi Lori Doli mi ha chiamato e mi ha spiegato che la polizia mi cercava per uccidermi. A quel punto sono scappato e sono andato a Bamako.
-
-Analisi:
-- $ RT $ menziona esplicitamente che il richiedente "è andato a Bamako".
-- $ A $ inferisce che il richiedente dimori a Bamako, anche se $ RT $ non lo dichiara esplicitamente.
-- Questa deduzione è ragionevole e pertinente alla domanda $ Q $, quindi si tratta di **Inference**.
-
-```xml
-<result>
-  <explanation>A è stata dedotta da RT, viene menzionato il fatto che "sono andato a Bamako", ma non che dimora lì. </explanation>
-  <verdict>Inference</verdict>
-</result>
-```
-
-**Esempio 7:**
-Q: Qual è il nome del fratello maggiore del richiedente?
-A: Lori Doli
-GTA: N/A
-RT: Poi un giorno sono uscito, avevo fatto delle fotocopie dei miei documenti (carta d'identità, passaporto scaduto). Mentre ero fuori, la polizia è andata a casa di Lori Doli per cercarmi. Se mi avessero visto mi avrebbero ucciso. Poi Lori Doli mi ha chiamato e mi ha spiegato che la polizia mi cercava per uccidermi. A quel punto sono scappato e sono andato a Bamako.
-
-Analisi:
-- $ RT $ menziona Lori Doli, ma non specifica che Lori Doli è il fratello maggiore del richiedente.
-- $ A $ assume erroneamente che Lori Doli sia il fratello maggiore, introducendo un'informazione non supportata da $ RT $.
-- Poiché $ A $ non risponde direttamente alla domanda $ Q $, si tratta di **Hallucination**.
-
-```xml
-<result>
-  <explanation>A è stata dedotta da RT, ma non risponde direttamente alla domanda Q. Il testo non specifica che Lori Doli è il fratello maggiore del richiedente, quindi la risposta è fuorviante e non pertinente alla domanda.</explanation>
-  <verdict>Hallucination</verdict>
-</result>
-```
-
-**Esempio 8:**
-Q: Perché la commissione ritiene attendibili le circostanze relative al fatto che il commerciante aveva fatto arrestare il richiedente?
-A: Il richiedente non ha rivolto alcuna denuncia o richiesta di protezione a nessuna autorità civile o religiosa del suo Paese per contrastare le minacce dello zio.
-GTA: N/A
-RT: CONSIDERATO che il richiedente dichiara di non essersi rivolto ad alcuna autorità civile o religiosa del suo Paese per contrastare le minacce dello zio.
-
-Analisi:
-- $ RT $ parla delle minacce dello zio, ma $ Q $ riguarda il commerciante.
-- $ A $ è logicamente dedotta da $ RT $, ma non è pertinente alla domanda $ Q $, poiché confonde il contesto (zio vs. commerciante).
-- Si tratta di **Hallucination**.
-
-<result>
-  <explanation>A non è pertinente alla domanda Q, poiché parla dello zio invece del commerciante. Nonostante A sia stata dedotta da RT, non risponde direttamente alla domanda Q.</explanation>
-  <verdict>Hallucination</verdict>
-</result>
-
-**Esempio 9:**
-Q: Il richiedente si sente a suo agio con l'interprete? (SI, NO, N/A)
-A: SI
-RT: Comprende bene l'interprete? Si, parliamo pula.
-GT: N/A
-
-Analisi:
-- $ RT $ discute della comprensione linguistica ("Comprende bene l'interprete? Si, parliamo pula").
-- $ A $ inferisce il comfort emotivo ("SI") dalla comprensione linguistica, ma ciò non è direttamente deducibile da $ RT $.
-- Poiché $ A $ non risponde direttamente alla domanda $ Q $, si tratta di **Hallucination**.
-
-
-<result>
-  <explanation>La risposta A ("SI") non trova un diretto riscontro nel testo di riferimento RT, che si concentra sulla comprensione linguistica ("Comprende bene l'interprete? Si, parliamo pula") senza fornire informazioni esplicite sul fatto che il richiedente si senta a suo agio con l'interprete. Il sentirsi a proprio agio implica un livello di comfort emotivo o psicologico che non è direttamente deducibile dalla semplice comprensione linguistica.</explanation>
-  <verdict>Hallucination</verdict>
-</result>
-
 ---
 """
 
