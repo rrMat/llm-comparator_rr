@@ -125,6 +125,22 @@ Presenta la tua valutazione nel seguente formato XML:
 </result>
 ```
 
+**Esempio 4:**
+- **Q:** A Francesco piace il gelato al cioccolato (SI, NO, N/A)?
+- **A:** NO
+- **R:** Plutone non è più un pianeta dal 2006, l'Unione Astronomica Internazionale, ha deciso di “declassare” Plutone a Pianeta Nano.  
+
+**Analisi:**
+- La domanda Q chiede se a Francesco piace il gelato al cioccolato e si aspetta una risposta SI, NO, N/A. La risposta A (NO) è nel fromato corretto.
+- Il ragionamento R è completamente fuori contesto, parla di Plutone e del suo status di pianeta. 
+
+```xml
+<result>
+  <explanation>A non è coerente con Q.</explanation>
+  <verdict>Wrong</verdict>
+</result>
+```
+
 ---
 
 **Il Tuo Compito:**
@@ -153,7 +169,7 @@ GTA: {response_b}
 
 **Compito:**
 Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q), una risposta di riferimento (GTA) e il testo (RT) usato per formulare la risposta.
-Ad ogni riposta possono corrispondere più verdetti.
+Ad ogni riposta possono corrispondere più verdetti, ma a una singola parte può essere assegnato un singolo verdetto.
 
 
 **Procedura di valutazione**
@@ -176,7 +192,7 @@ Ad ogni riposta possono corrispondere più verdetti.
 
 
 **Regole di Valutazione:**
-Con A' si intende una parte di A, una domanda A può avere più valutazioni. 
+Con A' si intende una parte di A, una domanda A può avere più valutazioni, ma ogni parte A' può avere un singolo label. 
 
 1. **A' e GTA corrispondono perfettamente nel significato (possono essere formulate diversamente):**
    Verdetto: `Correct`
@@ -207,7 +223,7 @@ Con A' si intende una parte di A, una domanda A può avere più valutazioni.
 **Line Guida per differenziare fra inferenza valida e inferenza non valida**
 - Le premesse presenti in RT implicano A'? Per capirlo bisogna valutare se le premesse sono valide per inferire A'.
 - - Se le premesse sono valide A' è **Inference**.
-- - Se le premesse sono valide A' è **Wrong**.
+- - Se le premesse non sono valide A' è **Wrong**.
 
 **Opzioni di Verdetto:**
 Il verdetto deve essere uno dei seguenti:
@@ -217,9 +233,11 @@ Il verdetto deve essere uno dei seguenti:
 **Formato di Output:**
 Presenta la tua valutazione nel seguente formato XML:
 
+Analisi:
+ANALISI A PASSI QUA
+
 ```xml
 <result>
-  <analisi>ANALISI A PASSI QUA</analisi>
   <explanation>LA TUA SPIEGAZIONE PER OGNI VERDETTO QUI.</explanation>
   <verdict>I VERDETTI SELEZIONATI QUI.</verdict>
 </result>
@@ -235,23 +253,24 @@ A: Cuoco
 GTA: cuoco
 RT: Mario lavora come cuoco da 5 anni presso la cooperativa sociale. Ha una moglie e due figli che vanno a scuola. 
 
+Analisi:
+
+- Passo 1:
+La domanda riguarda il lavoro svolto dal richiedente.
+
+- Passo 2:
+La risposta è un lavoro ed è pertinente alla domanda. 
+La risposta corrisponde a GTA. 
+La risposta non tralascia informazioni presenti in GTA.
+
+- Passo 3:
+Il testo contine in modo esplicito la risposta (lavora come cuoco). 
+
+- Passo 4: 
+Applicando le regole risulta che la risposta A corrisponde a GTA, non tralascia informazioni ed è esplicitamente presente nel testo. Perciò è 'Correct'.  
+
 ```xml
 <result>
-  <analisi>
-        - Passo 1:
-        La domanda riguarda il lavoro svolto dal richiedente.
-        
-        - Passo 2:
-        La risposta è un lavoro ed è pertinente alla domanda. 
-        La risposta corrisponde a GTA. 
-        La risposta non tralascia informazioni presenti in GTA.
-        
-        - Passo 3:
-        Il testo contine in modo esplicito la risposta (lavora come cuoco). 
-        
-        - Passo 4: 
-        Applicando le regole risulta che la risposta A corrisponde a GTA, non tralascia informazioni ed è esplicitamente presente nel testo. Perciò è 'Correct'.  
-    </analisi>
   <explanation>A e GTA hanno lo stesso significato.</explanation>
   <verdict>Correct</verdict>
 </result>
@@ -263,26 +282,26 @@ A: Francese, Tedesco
 GTA: Francese
 RT: Il richiedente è di madrelingua francese passa spesso le vacanze in germania. 
 
+Analisi:
+
+- Passo 1:
+La domanda riguarda le lingue parlate dal richiedente.
+
+- Passo 2:
+La risposta si può scomporre in Francese ed Tedesco.
+La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
+La parte di risposta (Francese) corrisponde a GTA. 
+La risposta non tralascia informazioni presenti in GTA.
+
+- Passo 3:
+Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
+La risposta (Tedesco) introduce un inferenza non valida, nel testo RT si menziona che il richiedente va in vacanza in germania. Questo premessa non è valida per inferire che il richiedente parli tedesco.
+
+- Passo 4: 
+Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, mentre la parte di risposta Tedesco è un inferenza non valida. Perciò è 'Correct' e 'Wrong'.
 
 ```xml
 <result>
-  <analisi>
-    - Passo 1:
-    La domanda riguarda le lingue parlate dal richiedente.
-    
-    - Passo 2:
-    La risposta si può scomporre in Francese ed Tedesco.
-    La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
-    La parte di risposta (Francese) corrisponde a GTA. 
-    La risposta non tralascia informazioni presenti in GTA.
-    
-    - Passo 3:
-    Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
-    La risposta (Tedesco) introduce un inferenza non valida, nel testo RT si menziona che il richiedente va in vacanza in germania. Questo premessa non è valida per inferire che il richiedente parli tedesco.
-    
-    - Passo 4: 
-    Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, mentre la parte di risposta Tedesco è un inferenza non valida. Perciò è 'Correct' e 'Wrong'.
-    </analisi>
   <explanation> Francese è Correct, Tedesco è Wrong</explanation>
   <verdict>Correct, Wrong</verdict>
 </result>
@@ -294,27 +313,28 @@ A: Francese, Tedesco
 GTA: Francese, Italiano
 RT: Il richiedente è di madrelingua francese e vive in Germania. 
 
+Analisi:
+- Passo 1:
+La domanda riguarda le lingue parlate dal richiedente.
+
+- Passo 2:
+La risposta si può scomporre in Francese ed Tedesco.
+La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
+La parte di risposta (Francese) corrisponde a GTA. 
+La risposta tralascia informazioni (Italiano) presenti in GTA.
+
+- Passo 3:
+Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
+La risposta (Tedesco) introduce un inferenza valida, nel testo RT si menziona che il richiedente vive in germania. Questo premessa è valida per inferire che il richiedente parlai tedesco.
+
+- Passo 4: 
+Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Tedesco è un inferenza valida. Mentre Italiano viene tralasciato. Perciò è 'Correct' e 'Inference' e 'Incomplete'.
+
+
 ```xml
 <result>
-    <analisi>
-        - Passo 1:
-        La domanda riguarda le lingue parlate dal richiedente.
-        
-        - Passo 2:
-        La risposta si può scomporre in Francese ed Tedesco.
-        La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
-        La parte di risposta (Francese) corrisponde a GTA. 
-        La risposta tralascia informazioni (Italiano) presenti in GTA.
-        
-        - Passo 3:
-        Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
-        La risposta (Tedesco) introduce un inferenza valida, nel testo RT si menziona che il richiedente vive in germania. Questo premessa è valida per inferire che il richiedente parlai tedesco.
-        
-        - Passo 4: 
-        Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Tedesco è un inferenza valida. Mentre Italiano viene tralasciato. Perciò è 'Correct' e 'Inference' e 'Incomplete'.
-    </analisi>
-  <explanation> Francese è Correct, Tedesco è Inference, Italiano manca quindi Incomplete</explanation>
-  <verdict>Correct, Wrong, Incomplete</verdict>
+ <explanation> Francese è Correct, Tedesco è Inference, Italiano manca quindi Incomplete</explanation>
+<verdict>Correct, Inference, Incomplete</verdict>
 </result>
 ```
 
@@ -324,30 +344,130 @@ A: Francese, Spagnolo, Polizia
 GTA: Francese, Italiano
 RT: Il richiedente è di madrelingua francese e vive in Germania. 
 
+Analisi:
+- Passo 1:
+La domanda riguarda le lingue parlate dal richiedente.
 
+- Passo 2:
+La risposta si può scomporre in Francese, Spagnolo e Polizia.
+La due parti di risposta Francese e Spagnolo sono due linguee e pertanto pertinenti alla domanda, mentre polizia non è pertinente. 
+La parte di risposta (Francese) corrisponde a GTA. 
+La risposta tralascia informazioni (Italiano) presenti in GTA.
+
+- Passo 3:
+Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
+La risposta (Spagnolo) non è presente nel testo RT in maniera implicita o esplicita. Risulta quini inventata.
+
+- Passo 4: 
+Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Spagnolo è un hallucination. Mentre Italiano viene tralasciato. Perciò è 'Correct' e 'Hallucination' e 'Incomplete'.
+
+  
 ```xml
 <result>
-    <analisi>
-        - Passo 1:
-        La domanda riguarda le lingue parlate dal richiedente.
-        
-        - Passo 2:
-        La risposta si può scomporre in Francese, Spagnolo e Polizia.
-        La due parti di risposta Francese e Spagnolo sono due linguee e pertanto pertinenti alla domanda, mentre polizia non è pertinente. 
-        La parte di risposta (Francese) corrisponde a GTA. 
-        La risposta tralascia informazioni (Italiano) presenti in GTA.
-        
-        - Passo 3:
-        Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
-        La risposta (Spagnolo) non è presente nel testo RT in maniera implicita o esplicita. Risulta quini inventata.
-        
-        - Passo 4: 
-        Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Spagnolo è un hallucination. Mentre Italiano viene tralasciato. Perciò è 'Correct' e 'Hallucination' e 'Incomplete'.
-    </analisi>
-  <explanation> Francese è Correct, Spagnolo è Hallucination, Italiano manca quindi Incomplete</explanation>
-  <verdict>Correct, Hallucination, Incomplete</verdict>
+<explanation> Francese è Correct, Spagnolo è Hallucination, Italiano manca quindi Incomplete</explanation>
+<verdict>Correct, Hallucination, Incomplete</verdict>
+</result>
+```
+
+**Esempio 5:**
+Q: Che lingue parla il richiedente?
+A: Francese
+GTA: N/A
+RT: Il richiedente lavora come cuoco ed è venuto in italia attraverso la frontiera di Palermo.
+
+Analisi:
+- Passo 1:
+La domanda riguarda le lingue parlate dal richiedente.
+
+- Passo 2:
+La risposta si può scomporre in Francese.
+La risposta Francese è una lingua e pertanto pertinente alla domanda.
+
+- Passo 3:
+Il testo non contiene infromazioni implicite o esplicite riguardo la domanda.  
+La risposta (Francese) non è presente nel testo RT in maniera implicita o esplicita. Risulta quindi inventata.
+
+- Passo 4: 
+Applicando le regole risulta che la parte di risposta Francese è un hallucination. Perciò è 'Hallucination'.
+
+  
+```xml
+<result>
+<explanation> Francese è Hallucination</explanation>
+<verdict>Hallucination</verdict>
+</result>
+```
+
+**Esempio 6:**
+Q: Il richiedente parla lo spagnolo (SI, NO, N/A)?
+A: NO
+GTA: N/A
+RT: Il richiedente lavora come cuoco e gli piace arrampicare.
+
+Analisi:
+- Passo 1:
+La domanda riguarda la lingue parlate dal richiedente ed vuole una risposta nel formato SI, NO, N/A.
+
+- Passo 2:
+La risposta si può scomporre in NO.
+La risposta NO è nel formato richiesto e pertanto pertinente alla domanda.
+
+- Passo 3:
+Il testo non contiene infromazioni implicite o esplicite riguardo la domanda.  
+La risposta NO non è presente nel testo RT in maniera implicita o esplicita. Risulta quindi inventata.
+
+- Passo 4: 
+Applicando le regole risulta che la parte di risposta NO è un hallucination. Perciò è 'Hallucination'.
+
+  
+```xml
+<result>
+<explanation> NO è Hallucination</explanation>
+<verdict>Hallucination</verdict>
+</result>
+```
+
+**Esempio 7:**
+Q: Il richiedente parla lo spagnolo (SI, NO, N/A)?
+A: SI
+GTA: N/A
+RT: Il richiedente vive in Spagna. E gli piace il gelato alla frutta. 
+
+Analisi:
+- Passo 1:
+La domanda riguarda la lingue parlate dal richiedente ed vuole una risposta nel formato SI, NO, N/A.
+
+- Passo 2:
+La risposta si può scomporre in SI.
+La risposta SI è nel formato richiesto e pertanto pertinente alla domanda.
+
+- Passo 3:
+Il testo contiene infromazioni implicite riguardo la domanda.  
+La risposta SI introduce un inferenza valida, nel testo RT si menziona che il richiedente vive in Spagna. Questo premessa è valida per inferire che il richiedente parlai spagnolo.
+
+- Passo 4: 
+Applicando le regole risulta che la parte di risposta SI è un inferenza. Perciò è 'Inference'.
+
+  
+```xml
+<result>
+<explanation> Si è Inference</explanation>
+<verdict>Inference</verdict>
 </result>
 ```
 ---
+
+**Note**
+Presenta la tua valutazione nel seguente formato analisi + XML:
+
+Analisi:
+ANALISI A PASSI QUA
+
+```xml
+<result>
+  <explanation>LA TUA SPIEGAZIONE PER OGNI VERDETTO QUI.</explanation>
+  <verdict>I VERDETTI SELEZIONATI QUI.</verdict>
+</result>
+```
 """
 
