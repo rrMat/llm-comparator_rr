@@ -76,10 +76,10 @@ class LLMJudgeRunner:
     self.rating_to_score_map = rating_to_score_map
 
   def create_prompt_for_recursive_judge(
-      self, prompt: str, response_a: str, response_b: str, full_text: str
+      self, prompt: str, response_a: str, response_b: str, full_text: str, model_reasoning:str
   ) -> str:
     prompt_for_judge = self.llm_judge_prompt_template[1].format(
-        prompt=prompt, response_a=response_a, response_b=response_b, full_text=full_text
+        prompt=prompt, response_a=response_a, response_b=response_b, full_text=full_text, model_reasoning=model_reasoning
     )
 
     return prompt_for_judge
@@ -197,7 +197,8 @@ class LLMJudgeRunner:
                 continue
             else:
                 judge_input = self.create_prompt_for_recursive_judge(
-                    j_input['prompt'], j_input['response_a'], j_input['response_b'], j_input['full_text'])
+                    prompt=j_input['prompt'], response_a=j_input['response_a'], response_b=j_input['response_b'],
+                    full_text=j_input['full_text'], model_reasoning=j_input['text_reference'])
                 # Validate loop for recursive judge
                 i = 0
                 out = None  # Initialize out to None
