@@ -14,7 +14,6 @@
 # ==============================================================================
 """Prompt templates for the LLM Comparator script."""
 
-
 COHERENT_JUDGE = """
 ### **Prompt del Giudice LLM con Attività di Tagging**
 
@@ -155,8 +154,6 @@ Valuta la seguente Q, A, R secondo le regole sopra indicate. Fornisci il tuo out
 - Concentrati sulla coerenza tra A e Q, e sul ruolo di R nel dimostrare la comprensione della domanda.
 """
 
-
-
 RECURSIVE_JUDGE = """
 ### **Prompt del Giudice LLM con Attività di Tagging**
 
@@ -165,12 +162,16 @@ RT: {full_text}
 Q: {prompt}
 A: {response_a}
 GTA: {response_b}
+MR: {model_reasoning}
 
 
 **Compito:**
 Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q), una risposta di riferimento (GTA) e il testo (RT) usato per formulare la risposta.
+Utilizza ragionamento modello (MR) per verificare se le informazioni aggiunte in A' sono supportate da RT. 
+Se il verdetto è etichettato come **Hallucination** o **Inference**, allora dovresti controllare il ragionamento del modello (MR). In questa condizione, se il testo MR **non è contenuto** in RT, il verdetto corrispondente dovrebbe essere etichettato come **Hallucination**. Altrimenti, il verdetto dovrebbe essere **Inference** quando il testo MR è validamente dedotto dal testo RT.
 Ad ogni riposta possono corrispondere più verdetti, ma a una singola parte può essere assegnato un singolo verdetto.
 
+---
 
 **Procedura di valutazione**
 
@@ -180,6 +181,7 @@ Ad ogni riposta possono corrispondere più verdetti, ma a una singola parte può
 - Passo 2. Esaminare la Risposta A:
 - - se possibile scomponi la risposta A in parti A'
 - - valuta se le singole parti A' di A forniscono una risposta alla domanda Q
+- - Verifica se la risposta A è una parafrasi di N/A ad es: "nel documento non ci sono riferimenti a..". Se è una parafrasi segnalalo e considera la risposta A come N/A per l'analisi successiva.
 - - Verifica se A o una parte A' corrisponde in significato alla risposta di riferimento GTA.
 - - Verifica se A tralascia informazioni contenute nella risposta di riferimento GTA. 
 
@@ -188,8 +190,15 @@ Ad ogni riposta possono corrispondere più verdetti, ma a una singola parte può
 - - Identificare se RT contiene informazioni esplicite o implicite che supportano A'.
 - - - Se implicite, determinare se le premesse contenute in RT sono valide e implicano A'.
 
-- Passo 4: Applicare le Regole di Valutazione e eventualmente assegna un verdetto.
+- Passo 4: Applicazione delle Regole di Valutazione:
+- - Applica le seguenti regole per assegnare il verdetto a ciascuna parte A'.
 
+- Passo 5: Valutazione del Model Reasoning (MR) e il Verdetto:
+  - Se il verdetto è etichettato come **Hallucination** o **Inference**, considera MR, il ragionamento usato dal modello per formulare A.  
+  - Se MR **non è contenuto** in RT, l'informazione aggiunta in A' è considerata **Hallucination**.  
+  - Se MR **è presente** in RT, l'informazione aggiunta in A' è dedotta validamente e viene etichettata come **Inference**.
+
+---
 
 **Regole di Valutazione:**
 Con A' si intende una parte di A, una domanda A può avere più valutazioni, ma ogni parte A' può avere un singolo label. 
@@ -205,29 +214,46 @@ Con A' si intende una parte di A, una domanda A può avere più valutazioni, ma 
 3. **A fornisce una risposta incompleta:**
    Verdetto: `Incomplete`
    Spiegazione: Spiega quali parti di della risposta di riferimento mancano per rendere A completa.  
-      
+
 4. **A' aggiunge informazioni rispetto a GTA che può essere inferta da RT:**
    Verdetto: `Inference`
-   Spiegazione: Spiega quali informazioni aggiunge A' rispetto a GTA e da che parte di RT. Perché A' sia considerata 'Inference' l'inferenza deve essere valida. Ovvero le premesse devono implicare la conclusione. 
-   
+   Spiegazione: Spiega quali informazioni aggiunge A' rispetto a GTA, indicando le premesse in RT che le supportano e confermate da MR. Perché A' sia considerata 'Inference' l'inferenza deve essere valida. Ovvero le premesse devono implicare la conclusione. 
+
 5. **A' aggiunge informazioni non presenti nel teso di riferimento RT.**  
    Verdetto: `Hallucination`  
-   Spiegazione: Indica che A' fornisce una risposta che non ha riscontro in RT nè in modo esplicito, nè attraverso inferenza. A' differenza di un Inference l'informazione non può essere inferta dal testo.  
+   Spiegazione: Indica che A' fornisce una risposta che non ha riscontro in RT nè in modo esplicito, nè attraverso inferenza, in quanto MR non risulta supportato dal testo (RT). A' differenza di un `Inference` l'informazione (o il ragionamento del modello (MR)) non può essere inferta dal testo (RT).  
 
+6. **A' e GTA sono entrambi N/A:**
+   Verdetto: `True Negative`
+   Spiegazione: Indica che sia A' che GTA sono N/A.
+
+7. **A' è N/A mentre GTA contiene una risposta:**
+   Verdetto: `Missing Answer`
+   Spiegazione: Indica che A' è mancante mentre GTA fornisce una risposta.
+
+---
 
 **Linea Guida per Differenziare Inference e Hallucination:**
 - **Pertinenza alla Domanda:** 
 - - Se l'informazione in A' non è presente nel testo A' è **Hallucination**.
 - - Se l'informazione in A' è dedotta da RT e le premesse implicano la conclusione **Inference**.
-  
+
+- **Utilizzo del Model Reasoning (MR):**  
+- - Verifica se il testo MR è presente in RT:  
+- - - Se **MR non è presente** in RT, l'informazione aggiunta in A' è considerata **Hallucination**.  
+- - - Se **MR è contenuto** in RT, l'informazione è considerata **Inference**.
+
+
 **Line Guida per differenziare fra inferenza valida e inferenza non valida**
 - Le premesse presenti in RT implicano A'? Per capirlo bisogna valutare se le premesse sono valide per inferire A'.
 - - Se le premesse sono valide A' è **Inference**.
 - - Se le premesse non sono valide A' è **Wrong**.
 
+---
+
 **Opzioni di Verdetto:**
 Il verdetto deve essere uno dei seguenti:
-['Correct', 'Wrong', 'Incomplete', 'Inference', 'Hallucination']
+['Correct', 'Wrong', 'Incomplete', 'Inference', 'Hallucination', 'Missing Answer', 'True Negative']
 
 
 **Formato di Output:**
@@ -252,6 +278,7 @@ Q: Che lavoro faceva il richiedente?
 A: Cuoco
 GTA: cuoco
 RT: Mario lavora come cuoco da 5 anni presso la cooperativa sociale. Ha una moglie e due figli che vanno a scuola. 
+MR: lavora come cuoco da 5 anni
 
 Analisi:
 
@@ -269,6 +296,9 @@ Il testo contine in modo esplicito la risposta (lavora come cuoco).
 - Passo 4: 
 Applicando le regole risulta che la risposta A corrisponde a GTA, non tralascia informazioni ed è esplicitamente presente nel testo. Perciò è 'Correct'.  
 
+- Passo 5:
+Il verdetto è etichettato come **Hallucination** o **Inference**. 
+
 ```xml
 <result>
   <explanation>A e GTA hanno lo stesso significato.</explanation>
@@ -280,7 +310,8 @@ Applicando le regole risulta che la risposta A corrisponde a GTA, non tralascia 
 Q: Che lingue parla il richiedente?
 A: Francese, Tedesco
 GTA: Francese
-RT: Il richiedente è di madrelingua francese passa spesso le vacanze in germania. 
+RT: Il richiedente è di madrelingua francese passa spesso le vacanze in Germania. 
+MR: madrelingua francese passa spesso le vacanze in Germania
 
 Analisi:
 
@@ -298,7 +329,10 @@ Il testo contine in modo esplicito parte della risposta (madrelingua francese).
 La risposta (Tedesco) introduce un inferenza non valida, nel testo RT si menziona che il richiedente va in vacanza in germania. Questo premessa non è valida per inferire che il richiedente parli tedesco.
 
 - Passo 4: 
-Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, mentre la parte di risposta Tedesco è un inferenza non valida. Perciò è 'Correct' e 'Wrong'.
+Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, mentre la parte di risposta Tedesco è un inferenza non valida. Anche se MR è incluso nel testo RT, questo è considerato come inferenza non valida nel passo 3 perche premessa non è valida per inferire che il richiedente parli tedesco. Quindi non abbiamo bisogno di controllare se MR è in RT o meno. Perciò è 'Correct' e 'Wrong'.
+
+- Passo 5:
+Il verdetto è etichettato come **Hallucination** o **Inference**. 
 
 ```xml
 <result>
@@ -312,6 +346,7 @@ Q: Che lingue parla il richiedente?
 A: Francese, Tedesco
 GTA: Francese, Italiano
 RT: Il richiedente è di madrelingua francese e vive in Germania. 
+MR: madrelingua francese e vive in Germania
 
 Analisi:
 - Passo 1:
@@ -328,8 +363,10 @@ Il testo contine in modo esplicito parte della risposta (madrelingua francese).
 La risposta (Tedesco) introduce un inferenza valida, nel testo RT si menziona che il richiedente vive in germania. Questo premessa è valida per inferire che il richiedente parlai tedesco.
 
 - Passo 4: 
-Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Tedesco è un inferenza valida. Mentre Italiano viene tralasciato. Perciò è 'Correct' e 'Inference' e 'Incomplete'.
+Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Tedesco è un inferenza valida. MR è incluso nel testo RT, e anche questo è considerato come inferenza valida nel passo 3 perche premessa è valida per inferire che il richiedente parli tedesco. Mentre Italiano viene tralasciato. Perciò è 'Correct' e 'Inference' e 'Incomplete'.
 
+- Passo 5:
+Parte del verdetto è etichettato come **Inference**, quindi considerando MR. Poiché MR è parte di RT o MR può essere inferito da RT, il verdetto selezionato 'Inferenza'.
 
 ```xml
 <result>
@@ -343,6 +380,7 @@ Q: Che lingue parla il richiedente?
 A: Francese, Spagnolo, Polizia
 GTA: Francese, Italiano
 RT: Il richiedente è di madrelingua francese e vive in Germania. 
+MR: madrelingua francese 
 
 Analisi:
 - Passo 1:
@@ -352,20 +390,21 @@ La domanda riguarda le lingue parlate dal richiedente.
 La risposta si può scomporre in Francese, Spagnolo e Polizia.
 La due parti di risposta Francese e Spagnolo sono due linguee e pertanto pertinenti alla domanda, mentre polizia non è pertinente. 
 La parte di risposta (Francese) corrisponde a GTA. 
-La risposta tralascia informazioni (Italiano) presenti in GTA.
 
 - Passo 3:
 Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
 La risposta (Spagnolo) non è presente nel testo RT in maniera implicita o esplicita. Risulta quini inventata.
 
 - Passo 4: 
-Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Spagnolo è un hallucination. Mentre Italiano viene tralasciato. Perciò è 'Correct' e 'Hallucination' e 'Incomplete'.
+Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Spagnolo è un hallucination perche non c'è niente in MR or RT sullo Spagnolo. Mentre Polizia è un wrong perche non è pertinente alla domanda. Perciò è 'Correct' e 'Hallucination' e 'Wrong' e 'Incomplete'.
 
-  
+- Passo 5:
+Parte del verdetto è etichettato come **Hallucination**, quindi considerando MR. Poiché MR non è parte di RT o MR non può essere inferito da RT, il verdetto selezionato 'Hallucination'.
+
 ```xml
 <result>
-<explanation> Francese è Correct, Spagnolo è Hallucination, Italiano manca quindi Incomplete</explanation>
-<verdict>Correct, Hallucination, Incomplete</verdict>
+<explanation> Francese è Correct, Spagnolo è Hallucination, Polizia è Wrong, Italiano manca quindi Incomplete</explanation>
+<verdict>Correct, Hallucination, Wrong, Incomplete</verdict>
 </result>
 ```
 
@@ -374,6 +413,7 @@ Q: Che lingue parla il richiedente?
 A: Francese
 GTA: N/A
 RT: Il richiedente lavora come cuoco ed è venuto in italia attraverso la frontiera di Palermo.
+MR: N/A
 
 Analisi:
 - Passo 1:
@@ -388,9 +428,11 @@ Il testo non contiene infromazioni implicite o esplicite riguardo la domanda.
 La risposta (Francese) non è presente nel testo RT in maniera implicita o esplicita. Risulta quindi inventata.
 
 - Passo 4: 
-Applicando le regole risulta che la parte di risposta Francese è un hallucination. Perciò è 'Hallucination'.
+Applicando le regole risulta che la parte di risposta Francese è un hallucination, e poi MR non è presente in RT. Perciò è 'Hallucination'.
 
-  
+- Passo 5:
+Parte del verdetto è etichettato come **Hallucination**, quindi considerando MR. Poiché MR non è parte di RT o MR non può essere inferito da RT, il verdetto selezionato 'Hallucination'.
+
 ```xml
 <result>
 <explanation> Francese è Hallucination</explanation>
@@ -403,6 +445,7 @@ Q: Il richiedente parla lo spagnolo (SI, NO, N/A)?
 A: NO
 GTA: N/A
 RT: Il richiedente lavora come cuoco e gli piace arrampicare.
+MR: N/A
 
 Analisi:
 - Passo 1:
@@ -417,9 +460,11 @@ Il testo non contiene infromazioni implicite o esplicite riguardo la domanda.
 La risposta NO non è presente nel testo RT in maniera implicita o esplicita. Risulta quindi inventata.
 
 - Passo 4: 
-Applicando le regole risulta che la parte di risposta NO è un hallucination. Perciò è 'Hallucination'.
+Applicando le regole risulta che la parte di risposta NO è un hallucination, e poi MR non è presente in RT. Perciò è 'Hallucination'.
 
-  
+- Passo 5:
+Parte del verdetto è etichettato come **Hallucination**, quindi considerando MR. Poiché MR non è parte di RT o MR non può essere inferito da RT, il verdetto selezionato 'Hallucination'.
+
 ```xml
 <result>
 <explanation> NO è Hallucination</explanation>
@@ -432,6 +477,7 @@ Q: Il richiedente parla lo spagnolo (SI, NO, N/A)?
 A: SI
 GTA: N/A
 RT: Il richiedente vive in Spagna. E gli piace il gelato alla frutta. 
+MR: vive in Spagna
 
 Analisi:
 - Passo 1:
@@ -446,15 +492,17 @@ Il testo contiene infromazioni implicite riguardo la domanda.
 La risposta SI introduce un inferenza valida, nel testo RT si menziona che il richiedente vive in Spagna. Questo premessa è valida per inferire che il richiedente parlai spagnolo.
 
 - Passo 4: 
-Applicando le regole risulta che la parte di risposta SI è un inferenza. Perciò è 'Inference'.
+Applicando le regole risulta che la parte di risposta SI è un inferenza, perche la risposta è pertinente alla domanda e MR è presente in RT. Perciò è 'Inference'.
 
-  
+- Passo 5:
+Parte del verdetto è etichettato come **Inference**, quindi considerando MR. Poiché MR è parte di RT o MR può essere inferito da RT, il verdetto selezionato 'Inference'.
+
 ```xml
 <result>
 <explanation> Si è Inference</explanation>
 <verdict>Inference</verdict>
 </result>
-```
+
 ---
 
 **Note**
