@@ -201,10 +201,15 @@ Ad ogni riposta possono corrispondere più verdetti, ma a una singola parte può
 -- se possibile scomponi la risposta di riferimento GTA in parti GTA'
 
 - Passo 1. Analizzare la Domanda Q:
-- - valutare quali informazioni specifiche vengono richieste dalle parti.  
+- - Se la domanda Q ha una struttura condizionale ("Se..., quale/perché/chi/come/dove"):
+- - - Non considerare la parte condizionale ("Se...") come una sottodomanda separata
+- - - Trattala come contesto per la domanda principale
+- - valutare quali informazioni specifiche vengono richieste dalle parti. 
+
 
 - Passo 2. Esaminare la Risposta A:
-- - se possibile scomponi la risposta A in parti A'
+- - Se la risposta A è complessa, dividerla in parti più semplici (A → A') per facilitare la comprensione
+- - - Nota: non considerare la risposta alla parte condizionale ("Se..") della domanda Q descritta in Passo 1. come una risposta separata. 
 - - valuta se le singole parti A' di A forniscono una risposta alla domanda Q
 - - Verifica se la risposta A è una parafrasi di N/A ad es: "nel documento non ci sono riferimenti a..". Se è una parafrasi segnalalo e considera la risposta A come N/A per l'analisi successiva.
 - - Verifica se A o una parte A' corrisponde in significato alla risposta di riferimento GTA.
