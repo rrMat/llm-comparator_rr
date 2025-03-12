@@ -21,6 +21,8 @@ from multiprocessing.connection import answer_challenge
 from typing import Optional
 from tqdm import tqdm
 import os
+from collections import defaultdict
+from datetime import datetime
 
 from llm_comparator import _logging
 from llm_comparator import model_helper
@@ -166,6 +168,19 @@ class LLMJudgeRunner:
 
       return output
 
+  @staticmethod
+  def extract_q_number(questions):
+      """Extract question number and body from a list of questions and categories."""
+      question_parts = defaultdict(dict)
+      pattern = re.compile(r'(Q\d+(?:\.\d+)?)\.?\s*(.*)')
+      match = pattern.match(questions)
+      try:
+          question_number = match.group(1)
+      except AttributeError:
+          question_number = None
+          _logger.warning(f"Question number matcher broke")
+      return question_number
+
 
   def run_query(self, inputs: Sequence[_JsonDict]) -> Sequence[str]:
     """Runs LLM judge."""
@@ -173,7 +188,8 @@ class LLMJudgeRunner:
     deterministic_judge_outputs = []
     judge_outputs = []
     coherence_outputs = []
-    output_path = os.getcwd() + "\output3"
+    experiment_time = datetime.now().strftime('%d-%m-%Y-%H-%M-%S')
+    output_path = os.getcwd() + "\output" + " " +experiment_time
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -183,7 +199,8 @@ class LLMJudgeRunner:
         if j_input['response_a'] in ["domanda_saltata", "N/A", "N\\A"]:
             out = self.deterministic_outputs(j_input)
             judge_outputs.append(out)
-            out_path = os.path.join(output_path + f"\judge_output_{j_input['example_index']}_.txt")
+            q_n = self.extract_q_number(j_input['prompt'])
+            out_path = os.path.join(output_path + f"\judge_output_{q_n}_.txt")
             with open(out_path, mode="w") as file:
                 file.write(out)
         else:
@@ -197,7 +214,8 @@ class LLMJudgeRunner:
                 out = self.generation_model_helper.predict(judge_input)
                 coherence_outputs.append(out)
                 if self.validate_answer(out):
-                    out_path = os.path.join(output_path + f"\judge_output_coherence_{j_input['example_index']}_.txt")
+                    q_n = self.extract_q_number(j_input['prompt'])
+                    out_path = os.path.join(output_path + f"\judge_output_coherence_{q_n}_.txt")
                     with open(out_path, mode = "w") as file:
                         file.write(out)
                     break  # Exit the loop immediately if validation succeeds
@@ -219,7 +237,8 @@ class LLMJudgeRunner:
             while i < 5:  # Limit retries to 5
                 out = self.generation_model_helper.predict(judge_input)
                 if self.validate_answer(out):
-                    out_path = os.path.join(output_path + f"\judge_output_{j_input['example_index']}_.txt")
+                    q_n = self.extract_q_number(j_input['prompt'])
+                    out_path = os.path.join(output_path + f"\judge_output_{q_n}_.txt")
                     with open(out_path, mode="w") as file:
                         file.write(out)
                     break  # Exit the loop immediately if validation succeeds
@@ -229,7 +248,8 @@ class LLMJudgeRunner:
             if i == 5:  # Check if all retries were exhausted
                 _logger.warning("Exceeded maximum retry  for recursive judge. Using missing evaluation.")
                 out = self.missing_evaluation(explanation="Il giudice LLM non ha valutato questo caso", verdict="Judge Failure")
-                out_path = os.path.join(output_path + f"\judge_output_{j_input['example_index']}_.txt")
+                q_n = self.extract_q_number(j_input['prompt'])
+                out_path = os.path.join(output_path + f"\judge_output_{q_n}_.txt")
                 with open(out_path, mode="w") as file:
                     file.write(out)
 

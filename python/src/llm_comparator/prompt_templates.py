@@ -319,7 +319,6 @@ Analisi:
 La domanda riguarda il lavoro svolto dal richiedente.
 
 - Passo 2:
-La risposta è un lavoro ed è pertinente alla domanda. 
 La risposta corrisponde a GTA. 
 La risposta non tralascia informazioni presenti in GTA.
 
@@ -356,7 +355,6 @@ La domanda riguarda le lingue parlate dal richiedente.
 
 - Passo 2:
 La risposta si può scomporre in Francese ed Tedesco.
-La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
 La parte di risposta (Francese) corrisponde a GTA. 
 La risposta non tralascia informazioni presenti in GTA.
 
@@ -394,7 +392,6 @@ La domanda riguarda le lingue parlate dal richiedente.
 
 - Passo 2:
 La risposta si può scomporre in Francese ed Tedesco.
-La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
 La parte di risposta (Francese) corrisponde a GTA. 
 La risposta tralascia informazioni (Italiano) presenti in GTA.
 
@@ -417,7 +414,7 @@ Parte del verdetto è etichettato come **Inference**, quindi considerando MR. Po
 
 **Esempio 4:**
 Q: Che lingue parla il richiedente?
-A: Francese, Spagnolo, Polizia
+A: Francese, Spagnolo
 GTA: Francese, Italiano
 RT: Il richiedente è di madrelingua francese e vive in Germania. 
 MR: madrelingua francese 
@@ -431,8 +428,7 @@ Analisi:
 La domanda riguarda le lingue parlate dal richiedente.
 
 - Passo 2:
-La risposta si può scomporre in Francese, Spagnolo e Polizia.
-La due parti di risposta Francese e Spagnolo sono due linguee e pertanto pertinenti alla domanda, mentre polizia non è pertinente. 
+La risposta si può scomporre in Francese, Spagnolo
 La parte di risposta (Francese) corrisponde a GTA. 
 
 - Passo 3:
@@ -440,15 +436,15 @@ Il testo contine in modo esplicito parte della risposta (madrelingua francese).
 La risposta (Spagnolo) non è presente nel testo RT in maniera implicita o esplicita. Risulta quini inventata.
 
 - Passo 4: 
-Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Spagnolo è un hallucination perche non c'è niente in MR or RT sullo Spagnolo. Mentre Polizia è un wrong perche non è pertinente alla domanda. Perciò è 'Correct' e 'Hallucination' e 'Wrong' e 'Incomplete'.
+Applicando le regole risulta che la parte di risposta Francese corrisponde a GTA, la parte di risposta Spagnolo è un hallucination perche non c'è niente in MR or RT sullo Spagnolo.  Perciò è 'Correct' e 'Hallucination' e 'Incomplete'.
 
 - Passo 5:
 Parte del verdetto è etichettato come **Hallucination**, quindi considerando MR. Poiché MR non è parte di RT o MR non può essere inferito da RT, il verdetto selezionato 'Hallucination'.
 
 ```xml
 <result>
-<explanation> Francese è Correct, Spagnolo è Hallucination, Polizia è Wrong, Italiano manca quindi Incomplete</explanation>
-<verdict>Correct, Hallucination, Wrong, Incomplete</verdict>
+<explanation> Francese è Correct, Spagnolo è Hallucination, Italiano manca quindi Incomplete</explanation>
+<verdict>Correct, Hallucination, Incomplete</verdict>
 </result>
 ```
 
@@ -469,7 +465,6 @@ La domanda riguarda le lingue parlate dal richiedente.
 
 - Passo 2:
 La risposta si può scomporre in Francese.
-La risposta Francese è una lingua e pertanto pertinente alla domanda.
 
 - Passo 3:
 Il testo non contiene infromazioni implicite o esplicite riguardo la domanda.  
@@ -505,7 +500,6 @@ La domanda riguarda la lingue parlate dal richiedente ed vuole una risposta nel 
 
 - Passo 2:
 La risposta si può scomporre in NO.
-La risposta NO è nel formato richiesto e pertanto pertinente alla domanda.
 
 - Passo 3:
 Il testo non contiene infromazioni implicite o esplicite riguardo la domanda.  
@@ -541,7 +535,6 @@ La domanda riguarda la lingue parlate dal richiedente ed vuole una risposta nel 
 
 - Passo 2:
 La risposta si può scomporre in SI.
-La risposta SI è nel formato richiesto e pertanto pertinente alla domanda.
 
 - Passo 3:
 Il testo contiene infromazioni implicite riguardo la domanda.  
@@ -573,5 +566,7 @@ ANALISI A PASSI QUA
   <verdict>I VERDETTI SELEZIONATI QUI.</verdict>
 </result>
 ```
+
+
 """
 
