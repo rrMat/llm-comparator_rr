@@ -173,7 +173,7 @@ Valuta la seguente Q, A, R secondo le regole sopra indicate. Fornisci il tuo out
 - Concentrati sulla coerenza tra A e Q, e sul ruolo di R nel dimostrare la comprensione della domanda.
 """
 
-RECURSIVE_JUDGE = """
+RECURSIVE_JUDGE_1 = """
 ### **Prompt del Giudice LLM con Attività di Tagging**
 
 **Input**
@@ -187,18 +187,222 @@ MR: {model_reasoning}
 **Compito:**
 Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q), una risposta di riferimento (GTA) e il testo (RT) usato per formulare la risposta.
 Utilizza ragionamento modello (MR) per verificare se le informazioni aggiunte in A' sono supportate da RT. 
-Se il verdetto è etichettato come **Hallucination** o **Inference**, allora dovresti controllare il ragionamento del modello (MR). In questa condizione, se il testo MR **non è contenuto** in RT, il verdetto corrispondente dovrebbe essere etichettato come **Hallucination**. Altrimenti, il verdetto dovrebbe essere **Inference** quando il testo MR è validamente dedotto dal testo RT.
-Ad ogni riposta possono corrispondere più verdetti, ma a una singola parte può essere assegnato un singolo verdetto.
 
 ---
 
 **Procedura di valutazione**
 
-- Passo 0. Analizzare la risposta di riferimento GTA:
--- riposta la risposta di riferimento GTA esattamente come ti è stata fornita
--- non cambiare la risposta di riferimento GTA
--- anche se la risposta di riferimento GTA è "N/A" non cercare una risposta nel testo
--- se possibile scomponi la risposta di riferimento GTA in parti GTA'
+- Passo 1. Analizzare la Domanda Q:
+- - valutare quali informazioni specifiche vengono richieste dalle parti.  
+
+- Passo 2. Esaminare la Risposta A:
+- - se possibile scomponi la risposta A in parti A'
+- - valuta se le singole parti A' di A forniscono una risposta alla domanda Q
+- - Verifica se la risposta A è una parafrasi di N/A ad es: "nel documento non ci sono riferimenti a..". Se è una parafrasi segnalalo e considera la risposta A come N/A per l'analisi successiva.
+- - Verifica se A o una parte A' corrisponde in significato alla risposta di riferimento GTA.
+- - Verifica se A tralascia informazioni contenute nella risposta di riferimento GTA. 
+
+- Passo 3. Analizza il Testo di Riferimento RT:
+- - Verificare se A o una parte A' introduce nuove informazioni non presenti nel testo di riferimento RT.
+- - Identificare se RT contiene informazioni esplicite o implicite che supportano A'.
+- - - Se implicite, determinare se le premesse contenute in RT sono valide e implicano A'.
+
+---
+
+**Formato di Output:**
+Presenta la tua valutazione nel seguente formato:
+
+Analisi:
+ANALISI A PASSI QUA
+
+
+---
+
+**Esempi:**
+
+**Esempio 1:**
+Q: Che lavoro faceva il richiedente?
+A: Cuoco
+GTA: cuoco
+RT: Mario lavora come cuoco da 5 anni presso la cooperativa sociale. Ha una moglie e due figli che vanno a scuola. 
+MR: lavora come cuoco da 5 anni
+
+Analisi:
+
+- Passo 1:
+La domanda riguarda il lavoro svolto dal richiedente.
+
+- Passo 2:
+La risposta è un lavoro ed è pertinente alla domanda. 
+La risposta corrisponde a GTA. 
+La risposta non tralascia informazioni presenti in GTA.
+
+- Passo 3:
+Il testo contiene in modo esplicito la risposta (lavora come cuoco). 
+
+**Esempio 2:**
+Q: Che lingue parla il richiedente?
+A: Francese, Tedesco
+GTA: Francese
+RT: Il richiedente è di madrelingua francese passa spesso le vacanze in Germania. 
+MR: madrelingua francese passa spesso le vacanze in Germania
+
+Analisi:
+
+- Passo 1:
+La domanda riguarda le lingue parlate dal richiedente.
+
+- Passo 2:
+La risposta si può scomporre in Francese ed Tedesco.
+La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
+La parte di risposta (Francese) corrisponde a GTA. 
+La risposta non tralascia informazioni presenti in GTA.
+
+- Passo 3:
+Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
+La risposta (Tedesco) introduce un inferenza non valida, nel testo RT si menziona che il richiedente va in vacanza in germania. Questo premessa non è valida per inferire che il richiedente parli tedesco.
+
+
+**Esempio 3:**
+Q: Che lingue parla il richiedente?
+A: Francese, Tedesco
+GTA: Francese, Italiano
+RT: Il richiedente è di madrelingua francese e vive in Germania. 
+MR: madrelingua francese e vive in Germania
+
+Analisi:
+- Passo 1:
+La domanda riguarda le lingue parlate dal richiedente.
+
+- Passo 2:
+La risposta si può scomporre in Francese ed Tedesco.
+La due parti di risposta sono due linguee e pertanto pertinenti alla domanda. 
+La parte di risposta (Francese) corrisponde a GTA. 
+La risposta tralascia informazioni (Italiano) presenti in GTA.
+
+- Passo 3:
+Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
+La risposta (Tedesco) introduce un inferenza valida, nel testo RT si menziona che il richiedente vive in germania. Questo premessa è valida per inferire che il richiedente parlai tedesco.
+
+
+
+**Esempio 4:**
+Q: Che lingue parla il richiedente?
+A: Francese, Spagnolo, Polizia
+GTA: Francese, Italiano
+RT: Il richiedente è di madrelingua francese e vive in Germania. 
+MR: madrelingua francese 
+
+Analisi:
+- Passo 1:
+La domanda riguarda le lingue parlate dal richiedente.
+
+- Passo 2:
+La risposta si può scomporre in Francese, Spagnolo e Polizia.
+La due parti di risposta Francese e Spagnolo sono due linguee e pertanto pertinenti alla domanda, mentre polizia non è pertinente. 
+La parte di risposta (Francese) corrisponde a GTA. 
+
+- Passo 3:
+Il testo contine in modo esplicito parte della risposta (madrelingua francese). 
+La risposta (Spagnolo) non è presente nel testo RT in maniera implicita o esplicita. Risulta quini inventata.
+
+
+
+**Esempio 5:**
+Q: Che lingue parla il richiedente?
+A: Francese
+GTA: N/A
+RT: Il richiedente lavora come cuoco ed è venuto in italia attraverso la frontiera di Palermo.
+MR: N/A
+
+Analisi:
+- Passo 1:
+La domanda riguarda le lingue parlate dal richiedente.
+
+- Passo 2:
+La risposta si può scomporre in Francese.
+La risposta Francese è una lingua e pertanto pertinente alla domanda.
+
+- Passo 3:
+Il testo non contiene infromazioni implicite o esplicite riguardo la domanda.  
+La risposta (Francese) non è presente nel testo RT in maniera implicita o esplicita. Risulta quindi inventata.
+
+
+
+**Esempio 6:**
+Q: Il richiedente parla lo spagnolo (SI, NO, N/A)?
+A: NO
+GTA: N/A
+RT: Il richiedente lavora come cuoco e gli piace arrampicare.
+MR: N/A
+
+Analisi:
+- Passo 1:
+La domanda riguarda la lingue parlate dal richiedente ed vuole una risposta nel formato SI, NO, N/A.
+
+- Passo 2:
+La risposta si può scomporre in NO.
+La risposta NO è nel formato richiesto e pertanto pertinente alla domanda.
+
+- Passo 3:
+Il testo non contiene infromazioni implicite o esplicite riguardo la domanda.  
+La risposta NO non è presente nel testo RT in maniera implicita o esplicita. Risulta quindi inventata.
+
+
+
+**Esempio 7:**
+Q: Il richiedente parla lo spagnolo (SI, NO, N/A)?
+A: SI
+GTA: N/A
+RT: Il richiedente vive in Spagna. E gli piace il gelato alla frutta. 
+MR: vive in Spagna
+
+Analisi:
+- Passo 1:
+La domanda riguarda la lingue parlate dal richiedente ed vuole una risposta nel formato SI, NO, N/A.
+
+- Passo 2:
+La risposta si può scomporre in SI.
+La risposta SI è nel formato richiesto e pertanto pertinente alla domanda.
+
+- Passo 3:
+Il testo contiene infromazioni implicite riguardo la domanda.  
+La risposta SI introduce un inferenza valida, nel testo RT si menziona che il richiedente vive in Spagna. Questo premessa è valida per inferire che il richiedente parlai spagnolo.
+
+---
+
+**Note**
+Presenta la tua valutazione nel seguente formato analisi + XML:
+
+Analisi:
+ANALISI A PASSI QUA
+
+"""
+
+
+
+RECURSIVE_JUDGE_2 = """
+Se il verdetto è etichettato come **Hallucination** o **Inference**, allora dovresti controllare il ragionamento del modello (MR). In questa condizione, se il testo MR **non è contenuto** in RT, il verdetto corrispondente dovrebbe essere etichettato come **Hallucination**. Altrimenti, il verdetto dovrebbe essere **Inference** quando il testo MR è validamente dedotto dal testo RT.
+Ad ogni riposta possono corrispondere più verdetti, ma a una singola parte può essere assegnato un singolo verdetto.
+
+### **Prompt del Giudice LLM con Attività di Tagging**
+
+**Input**
+P : {analysis}
+
+Q: {prompt}
+A: {response_a}
+GTA: {response_b}
+MR: {model_reasoning}
+
+
+**Compito:**
+Sei un Giudice LLM incaricato di valutare una risposta (A) data una domanda (Q), una risposta di riferimento (GTA) e il testo (RT) usato per formulare la risposta.
+Utilizza ragionamento modello (MR) per verificare se le informazioni aggiunte in A' sono supportate da RT. 
+
+---
+
+**Procedura di valutazione**
 
 - Passo 1. Analizzare la Domanda Q:
 - - valutare quali informazioni specifiche vengono richieste dalle parti.  
@@ -307,9 +511,6 @@ MR: lavora come cuoco da 5 anni
 
 Analisi:
 
-- Passo 0: 
-- La risposta di riferimento GTA è: "cuoco", afferma che il lavoro è cuoco.
-
 - Passo 1:
 La domanda riguarda il lavoro svolto dal richiedente.
 
@@ -342,9 +543,6 @@ RT: Il richiedente è di madrelingua francese passa spesso le vacanze in Germani
 MR: madrelingua francese passa spesso le vacanze in Germania
 
 Analisi:
-
-- Passo 0: 
-- La risposta di riferimento GTA è: "Francese", afferma che la lingua parlata è Francese.
 
 - Passo 1:
 La domanda riguarda le lingue parlate dal richiedente.
@@ -380,10 +578,6 @@ RT: Il richiedente è di madrelingua francese e vive in Germania.
 MR: madrelingua francese e vive in Germania
 
 Analisi:
-
-- Passo 0: 
-- La risposta di riferimento GTA è: "Francese, Italiano", afferma che le linguee parlate sono Francese e Italiano.
-
 - Passo 1:
 La domanda riguarda le lingue parlate dal richiedente.
 
@@ -418,10 +612,6 @@ RT: Il richiedente è di madrelingua francese e vive in Germania.
 MR: madrelingua francese 
 
 Analisi:
-
-- Passo 0: 
-- La risposta di riferimento GTA è: "Francese, Italiano", afferma che le linguee parlate sono Francese e Italiano.
-
 - Passo 1:
 La domanda riguarda le lingue parlate dal richiedente.
 
@@ -455,10 +645,6 @@ RT: Il richiedente lavora come cuoco ed è venuto in italia attraverso la fronti
 MR: N/A
 
 Analisi:
-
-- Passo 0: 
-- La risposta di riferimento GTA è: "N/A", afferma che la risposta è "N/A", non è contenuta nel testo
-
 - Passo 1:
 La domanda riguarda le lingue parlate dal richiedente.
 
@@ -491,10 +677,6 @@ RT: Il richiedente lavora come cuoco e gli piace arrampicare.
 MR: N/A
 
 Analisi:
-
-- Passo 0: 
-- La risposta di riferimento GTA è: "N/A", afferma che la risposta è "N/A", non è contenuta nel testo
-
 - Passo 1:
 La domanda riguarda la lingue parlate dal richiedente ed vuole una risposta nel formato SI, NO, N/A.
 
@@ -527,10 +709,6 @@ RT: Il richiedente vive in Spagna. E gli piace il gelato alla frutta.
 MR: vive in Spagna
 
 Analisi:
-
-- Passo 0: 
-- La risposta di riferimento GTA è: "N/A", afferma che la risposta è "N/A", non è contenuta nel testo
-
 - Passo 1:
 La domanda riguarda la lingue parlate dal richiedente ed vuole una risposta nel formato SI, NO, N/A.
 
@@ -568,5 +746,7 @@ ANALISI A PASSI QUA
   <verdict>I VERDETTI SELEZIONATI QUI.</verdict>
 </result>
 ```
-"""
 
+
+
+"""

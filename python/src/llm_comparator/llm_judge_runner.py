@@ -20,6 +20,7 @@ import re
 from multiprocessing.connection import answer_challenge
 from typing import Optional
 from tqdm import tqdm
+import os
 
 from llm_comparator import _logging
 from llm_comparator import model_helper
@@ -125,9 +126,9 @@ class LLMJudgeRunner:
     ```'
     """
 
-    if input["response_a"] == "N/A" and input["response_b"] == "N/A":
+    if input["response_a"] in ["N/A", "N\\A"] and input["response_b"] in ["N/A", "N\\A"]:
         output = xml_structure.format(explanation= "A e GTA sono entrambe N/A.",verdict = "True Negative")
-    if input["response_a"] == "N/A" and input["response_b"] != "N/A":
+    if input["response_a"] in ["N/A", "N\\A"] and input["response_b"] not in ["N/A", "N\\A"]:
         output = xml_structure.format(explanation="A è N/A mentre GTA fornisce una risposta.", verdict="Missing Answer")
     if input["response_a"] == "domanda_saltata":
         output = xml_structure.format(explanation="A è 'domanda saltata', il modello ha saltato la domanda.", verdict="Skipped Question")
@@ -171,10 +172,20 @@ class LLMJudgeRunner:
     judge_inputs = []
     deterministic_judge_outputs = []
     judge_outputs = []
+    coherence_outputs = []
+    output_path = os.getcwd() + "\output3"
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+
     for j_input in tqdm(inputs):
         # Filter out Deterministic Cases
-        if j_input['response_a'] in ["domanda_saltata", "N/A"]:
-            judge_outputs.append(self.deterministic_outputs(j_input))
+        if j_input['response_a'] in ["domanda_saltata", "N/A", "N\\A"]:
+            out = self.deterministic_outputs(j_input)
+            judge_outputs.append(out)
+            out_path = os.path.join(output_path + f"\judge_output_{j_input['example_index']}_.txt")
+            with open(out_path, mode="w") as file:
+                file.write(out)
         else:
             # We need a two step startegy first a coherence judge and then the actual judge.
             judge_input = self.create_prompt_for_coherence_judge(
@@ -184,7 +195,11 @@ class LLMJudgeRunner:
             out = None  # Initialize out to None
             while i < 5:  # Limit retries to 5
                 out = self.generation_model_helper.predict(judge_input)
+                coherence_outputs.append(out)
                 if self.validate_answer(out):
+                    out_path = os.path.join(output_path + f"\judge_output_coherence_{j_input['example_index']}_.txt")
+                    with open(out_path, mode = "w") as file:
+                        file.write(out)
                     break  # Exit the loop immediately if validation succeeds
                 _logger.warning(f"Repeating the generation for coherence judge for the {i + 1}-th time")
                 i += 1  # Increment i only if validation fails
@@ -194,24 +209,29 @@ class LLMJudgeRunner:
             # Check the output, is there coherence or not?
             if not self.is_coherent(out):
                 judge_outputs.append(out)
-                continue
-            else:
-                judge_input = self.create_prompt_for_recursive_judge(
-                    prompt=j_input['prompt'], response_a=j_input['response_a'], response_b=j_input['response_b'],
-                    full_text=j_input['full_text'], model_reasoning=j_input['text_reference'])
-                # Validate loop for recursive judge
-                i = 0
-                out = None  # Initialize out to None
-                while i < 5:  # Limit retries to 5
-                    out = self.generation_model_helper.predict(judge_input)
-                    if self.validate_answer(out):
-                        break  # Exit the loop immediately if validation succeeds
-                    _logger.warning(f"Repeating the generation for recursive judge for the {i + 1}-th time")
-                    i += 1  # Increment i only if validation fails
+                # continue
+            judge_input = self.create_prompt_for_recursive_judge(
+                prompt=j_input['prompt'], response_a=j_input['response_a'], response_b=j_input['response_b'],
+                full_text=j_input['full_text'], model_reasoning=j_input['text_reference'])
+            # Validate loop for recursive judge
+            i = 0
+            out = None  # Initialize out to None
+            while i < 5:  # Limit retries to 5
+                out = self.generation_model_helper.predict(judge_input)
+                if self.validate_answer(out):
+                    out_path = os.path.join(output_path + f"\judge_output_{j_input['example_index']}_.txt")
+                    with open(out_path, mode="w") as file:
+                        file.write(out)
+                    break  # Exit the loop immediately if validation succeeds
+                _logger.warning(f"Repeating the generation for recursive judge for the {i + 1}-th time")
+                i += 1  # Increment i only if validation fails
 
-                if i == 5:  # Check if all retries were exhausted
-                    _logger.warning("Exceeded maximum retry  for recursive judge. Using missing evaluation.")
-                    out = self.missing_evaluation(explanation="Il giudice LLM non ha valutato questo caso", verdict="Judge Failure")
+            if i == 5:  # Check if all retries were exhausted
+                _logger.warning("Exceeded maximum retry  for recursive judge. Using missing evaluation.")
+                out = self.missing_evaluation(explanation="Il giudice LLM non ha valutato questo caso", verdict="Judge Failure")
+                out_path = os.path.join(output_path + f"\judge_output_{j_input['example_index']}_.txt")
+                with open(out_path, mode="w") as file:
+                    file.write(out)
 
                 judge_outputs.append(out)
 
