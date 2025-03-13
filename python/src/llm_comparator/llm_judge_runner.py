@@ -112,6 +112,7 @@ class LLMJudgeRunner:
                     'response_b': ex['response_b'],
                     "full_text": ex["custom_fields"]["full_text"],
                     "text_reference": ex["custom_fields"]["text_reference"],
+                    "model_name": ex["custom_fields"]["model_name"],
                     'is_flipped': False,
                 })
         _logger.info('Created %d inputs for LLM judge.', len(inputs_with_repeats))
@@ -197,6 +198,7 @@ class LLMJudgeRunner:
 
         for j_input in tqdm(inputs):
             q_n = self.extract_q_number(j_input['prompt'])
+            model_name = j_input["model_name"]
             current_labels = list()
             # Filter out Deterministic Cases
             if j_input['response_a'] in ["domanda_saltata", "N/A", "N\\A"]:
@@ -205,7 +207,7 @@ class LLMJudgeRunner:
                 judge_outputs_dict[q_n].append(out)
                 label = self.parse_xml_output(out)
                 current_labels.append(label)
-                out_path = os.path.join(output_path, f"judge_runner_{q_n}_deterministic_{judge_repetition}.txt")
+                out_path = os.path.join(output_path, f"{model_name}_judge_runner_{q_n}_deterministic_{judge_repetition}.txt")
                 with open(out_path, mode="w") as file:
                     file.write(out)
             else:
@@ -219,8 +221,8 @@ class LLMJudgeRunner:
                     out = self.generation_model_helper.predict(judge_input)
                     coherence_outputs.append(out)
                     if self.validate_answer(out):
-                        out_path = os.path.join(output_path, f"judge_runner_{q_n}_coherence_{judge_repetition}.txt")
-                        judge_outputs.append(out)
+                        out_path = os.path.join(output_path, f"{model_name}_judge_runner_{q_n}_coherence_{judge_repetition}.txt")
+                        # judge_outputs.append(out)
                         judge_outputs_dict[q_n].append(out)
                         label = self.parse_xml_output(out)
                         if not self.is_coherent(out):
@@ -250,7 +252,7 @@ class LLMJudgeRunner:
                 while i < 5:  # Limit retries to 5
                     out = self.generation_model_helper.predict(judge_input)
                     if self.validate_answer(out):
-                        out_path = os.path.join(output_path, f"judge_runner_{q_n}_recurrent_{judge_repetition}.txt")
+                        out_path = os.path.join(output_path, f"{model_name}_judge_runner_{q_n}_recurrent_{judge_repetition}.txt")
                         judge_outputs.append(out)
                         judge_outputs_dict[q_n].append(out)
                         label = self.parse_xml_output(out)
@@ -265,7 +267,7 @@ class LLMJudgeRunner:
                     _logger.warning("Exceeded maximum retry  for recursive judge. Using missing evaluation.")
                     out = self.missing_evaluation(explanation="Il giudice LLM non ha valutato questo caso",
                                                   verdict="Judge Failure")
-                    out_path = os.path.join(output_path, f"judge_runner_{q_n}_recurrent_{judge_repetition}.txt")
+                    out_path = os.path.join(output_path, f"{model_name}_judge_runner_{q_n}_recurrent_{judge_repetition}.txt")
                     with open(out_path, mode="w") as file:
                         file.write(out)
 
@@ -274,7 +276,7 @@ class LLMJudgeRunner:
                     label = self.parse_xml_output(out)
                     current_labels.append(label)
 
-            all_labels[judge_repetition].append({q_n: current_labels})
+            all_labels[judge_repetition].append({model_name: {q_n: current_labels}})
             judge_repetition += 1
             if judge_repetition == num_repeats:
                 judge_repetition = 0
