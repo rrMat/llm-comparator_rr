@@ -31,7 +31,7 @@ def run(
     judge: llm_judge_runner.LLMJudgeRunner,
     model_names: Sequence[str] = ('A', 'B'),
     judge_opts: Optional[my_types.JsonDict] = None,
-) -> tuple[my_types.JsonDict, zip[Any]]:
+) -> tuple[my_types.JsonDict, Any]:
     """Runs a comparison with LLM Comparator.
 
     LLM Comparator comparisons are run in three steps:
