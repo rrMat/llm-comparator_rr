@@ -17,7 +17,7 @@
 import abc
 from collections.abc import Iterable, Sequence
 import time
-from typing import Optional
+from typing import Optional, List, Any
 from tqdm import tqdm
 
 from llm_comparator import _logging
@@ -190,3 +190,67 @@ class HuggingFaceEmbeddingModelHelper(EmbeddingModelHelper):
         except Exception as e:
             _logger.error(f'Error during HuggingFace embedding batch: {e}')
             return []
+
+
+class HuggingFaceVLLMGenerationModelHelper(GenerationModelHelper):
+    """HuggingFace text generation model helper."""
+
+    def __init__(self, temperature, max_new_tokens, top_p, top_k, repetition_penalty,
+                 model_name: str = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"):
+
+        from vllm import LLM, SamplingParams
+
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
+        self.repetition_penalty = repetition_penalty
+
+        self.sampling_params = SamplingParams(max_tokens=self.max_new_tokens,
+                                              temperature=self.temperature,
+                                              top_p=self.top_p,
+                                              top_k=self.top_k,
+                                              repetition_penalty=self.repetition_penalty)
+        self.model = LLM(model=model_name, quantization="AWQ")
+
+    def predict(self, prompt: str) -> (str | List[Any]):
+
+        if not prompt:
+            print("No messages provided.")
+            return ""
+
+        try:
+            generated_ids = self.model.generate(prompt, self.sampling_params)
+
+            response = [
+                generated_id.outputs[0].text for generated_id in generated_ids
+            ]
+
+            # Strip the prompt tokens
+            print(f"response: {response}")
+            return response
+        except Exception as e:
+            _logger.error(f"Error during LLM chat generation: {e}")
+            return ""
+
+    def predict_batch(self, batch_of_messages: Sequence[str]) -> (str | list[list[Any]]):
+        """
+        Runs predict_chat on a batch of conversations.
+        Each item in 'batch_of_messages' is a list of dicts representing a conversation.
+        """
+        results = []
+        for prompt in tqdm(batch_of_messages):
+            try:
+                generated_ids = self.model.generate(prompt, self.sampling_params)
+
+                response = [
+                    generated_id.outputs[0].text for generated_id in generated_ids
+                ]
+
+                # Strip the prompt tokens
+                print(f"response: {response}")
+                results.append(response)
+            except Exception as e:
+                _logger.error(f"Error during LLM chat generation: {e}")
+                return ""
+        return results
