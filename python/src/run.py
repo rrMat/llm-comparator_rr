@@ -1,7 +1,7 @@
 from llm_comparator import comparison
-from llm_comparator import model_helper
+from llm_comparator import model_helper_together
 from llm_comparator import llm_judge_runner
-from llm_comparator.model_helper import TogetherGeneration
+from llm_comparator.model_helper_together import TogetherGeneration
 
 import pickle
 
