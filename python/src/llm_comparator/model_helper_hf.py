@@ -226,7 +226,6 @@ class HuggingFaceVLLMGenerationModelHelper(GenerationModelHelper):
                 generated_id.outputs[0].text for generated_id in generated_ids
             ]
 
-            # Strip the prompt tokens
             print(f"response: {response}")
             return response
         except Exception as e:
@@ -253,4 +252,72 @@ class HuggingFaceVLLMGenerationModelHelper(GenerationModelHelper):
             except Exception as e:
                 _logger.error(f"Error during LLM chat generation: {e}")
                 return ""
+        return results
+
+
+class HuggingFaceLlamaCPPGenerationModelHelper(GenerationModelHelper):
+    """HuggingFace text generation model helper."""
+
+    def __init__(self, temperature, max_new_tokens, top_p, top_k, repetition_penalty,
+                 model_name, model_filename, input_context_length, cache_dir):
+
+        from llama_cpp import Llama
+
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
+        self.repetition_penalty = repetition_penalty
+
+        self.model = Llama.from_pretrained(repo_id=model_name,
+                                           filename=model_filename,
+                                           cache_dir=cache_dir,
+                                           n_ctx=input_context_length,
+                                           verbose=True)
+
+    def predict(self, prompt: str) -> (str | List[Any]):
+
+        if not prompt:
+            print("No messages provided.")
+            return ""
+
+        try:
+            messages = {"role": "system", "content": prompt},
+
+            generated_ids = self.model.create_chat_completion(
+                messages=messages,
+                max_tokens=self.max_new_tokens,
+                temperature=self.temperature,
+                top_p=self.top_p,
+                top_k=self.top_k,
+                repeat_penalty=self.repetition_penalty
+            )
+            response = generated_ids["choices"][0]["message"]["content"]
+
+            print(f"response: {response}")
+            return response
+        except Exception as e:
+            _logger.error(f"Error during LLM chat generation: {e}")
+            return ""
+
+    def predict_batch(self, batch_of_messages: Sequence[str]) -> Sequence[str]:
+        """
+        Runs predict_chat on a batch of conversations.
+        Each item in 'batch_of_messages' is a list of dicts representing a conversation.
+        """
+        results = []
+        for prompt in tqdm(batch_of_messages):
+            messages = {"role": "system", "content": prompt},
+            # Format the chat messages into a single string
+            generated_ids = self.model.create_chat_completion(
+                messages=messages,
+                max_tokens=self.max_new_tokens,
+                temperature=self.temperature,
+                top_p=self.top_p,
+                top_k=self.top_k,
+                repeat_penalty=self.repetition_penalty
+            )
+            response = generated_ids["choices"][0]["message"]["content"]
+            results.append(response)
+            tqdm.write(f"results: {results}")
         return results
