@@ -208,7 +208,7 @@ class LLMJudgeRunner:
                 label = self.parse_xml_output(out)
                 current_labels.append(label)
                 out_path = os.path.join(output_path, f"{model_name}_judge_runner_{q_n}_deterministic_{judge_repetition}.txt")
-                with open(out_path, mode="w") as file:
+                with open(out_path, mode="w", encoding="utf-8") as file:
                     file.write(out)
             else:
                 # We need a two step startegy first a coherence judge and then the actual judge.
@@ -227,7 +227,7 @@ class LLMJudgeRunner:
                         label = self.parse_xml_output(out)
                         if not self.is_coherent(out):
                             current_labels.append(f"{label}(Incoherent)")
-                        with open(out_path, mode="w") as file:
+                        with open(out_path, mode="w", encoding="utf-8") as file:
                             file.write(out)
                         break  # Exit the loop immediately if validation succeeds
                     _logger.warning(f"Repeating the generation for coherence judge for the {i + 1}-th time")
@@ -257,7 +257,7 @@ class LLMJudgeRunner:
                         judge_outputs_dict[q_n].append(out)
                         label = self.parse_xml_output(out)
                         current_labels.append(label)
-                        with open(out_path, mode="w") as file:
+                        with open(out_path, mode="w", encoding="utf-8") as file:
                             file.write(out)
                         break  # Exit the loop immediately if validation succeeds
                     _logger.warning(f"Repeating the generation for recursive judge for the {i + 1}-th time")
@@ -268,7 +268,7 @@ class LLMJudgeRunner:
                     out = self.missing_evaluation(explanation="Il giudice LLM non ha valutato questo caso",
                                                   verdict="Judge Failure")
                     out_path = os.path.join(output_path, f"{model_name}_judge_runner_{q_n}_recurrent_{judge_repetition}.txt")
-                    with open(out_path, mode="w") as file:
+                    with open(out_path, mode="w", encoding="utf-8") as file:
                         file.write(out)
 
                     judge_outputs.append(out)
