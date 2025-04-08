@@ -326,7 +326,7 @@ class LLMJudgeRunner:
             try:
                 score = 0
                 for rate in rating_label.split(","):
-                    score += self.rating_to_score_map[rate.strip()]
+                    score += self.rating_to_score_map.get(rate.strip(), 1)
             except KeyError:
                 _logger.error(
                     'LLM judge returned an unknown rating label: %s}', rating_label
